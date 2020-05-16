@@ -1,8 +1,11 @@
 use std::env;
 use std::fs;
 use std::io;
+use std::process;
 
 mod scan;
+mod tokens;
+mod parse;
 
 struct Interpreter {
     had_error: bool
@@ -18,9 +21,12 @@ impl Interpreter {
         let contents = fs::read_to_string(filename)
             .expect("Something went wrong reading the file");
         self.run(&contents);
+        if self.had_error {
+            process::exit(1);
+        }
     }
 
-    fn run_prompt(&self) {
+    fn run_prompt(&mut self) {
         println!("Hello repl");
         let mut input = String::new();
         
@@ -29,6 +35,7 @@ impl Interpreter {
                 Ok(_) => { 
                     self.run(&input);
                     input = String::new();
+                    self.had_error = false;
                 }
                 Err(error) => println!("error: {}", error),
             }
@@ -48,7 +55,7 @@ impl Interpreter {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let lox = Interpreter::new();
+    let mut lox = Interpreter::new();
     if args.len() > 2 {
         panic!("usage: rlox [script]");
     }
