@@ -21,17 +21,17 @@ pub enum TokenType {
 }
 
 #[derive(Debug)]
-pub struct Token { 
+pub struct Token<'a> { 
     token_type: TokenType,
-    lexeme: String,                                    
-    literal: Option<LiteralValue>,                                     
+    lexeme: &'a str,                                    
+    literal: Option<LiteralValue<'a>>,                                     
     line: i32                                                       
 }
 
 #[derive(Debug)]
-pub enum LiteralValue {
+pub enum LiteralValue<'a> {
     NumberValue(f64),
-    StringValue(String),
+    StringValue(&'a str),
     BooleanValue(bool),
     NilValue
 }

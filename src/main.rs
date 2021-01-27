@@ -3,9 +3,13 @@ use std::fs;
 use std::io;
 use std::process;
 
+use error::LoxError;
+use io::{Write, stdout};
+
 mod scan;
 mod tokens;
 mod parse;
+mod error;
 
 struct Interpreter {
     had_error: bool
@@ -17,7 +21,7 @@ impl Interpreter {
         return Interpreter { had_error: false};
     }
 
-    fn run_file(&self, filename: &String) {
+    fn run_file(&mut self, filename: &String) {
         let contents = fs::read_to_string(filename)
             .expect("Something went wrong reading the file");
         self.run(&contents);
@@ -27,14 +31,21 @@ impl Interpreter {
     }
 
     fn run_prompt(&mut self) {
-        println!("Hello repl");
+        println!("Welcome to Lox REPL!");
         let mut input = String::new();
-        
+        let stdin = io::stdin();
         loop {
-            match io::stdin().read_line(&mut input) {
-                Ok(_) => { 
+            print!("> ");
+            io::stdout().flush().ok().expect("Couldn't flush stdout");
+            input.clear();
+            let read = stdin.read_line(&mut input);
+            match read {
+                Ok(chars_read) => { 
+                    if chars_read == 0 {
+                        break;
+                    }
                     self.run(&input);
-                    input = String::new();
+                    // last run had error, but new run may be fine
                     self.had_error = false;
                 }
                 Err(error) => println!("error: {}", error),
@@ -42,12 +53,19 @@ impl Interpreter {
         }
     }
 
-    fn run(&self, input: &String) {
-        println!("{}", input);
+    fn run(&mut self, input: &String) {
+        let mut scanner = scan::Scanner::new(input);
+        let result = scanner.scan();
+        match result {
+            Ok(_) => {
+
+            },
+            Err(e) => self.error(e)
+        }
     }
 
-    fn error(&mut self, line: i32, error_where: &String, message: &String) {
-        println!("[line {} ] Error{}: {}", line, error_where, message);
+    fn error(&mut self, error: LoxError) {
+        println!("{:?}", error);
         self.had_error = true;
     }
     
