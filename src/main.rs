@@ -58,7 +58,7 @@ impl Interpreter {
         let result = scanner.scan();
         match result {
             Ok(_) => {
-
+                print!("{:?}", scanner.tokens)
             },
             Err(e) => self.error(e)
         }

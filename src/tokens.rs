@@ -22,10 +22,10 @@ pub enum TokenType {
 
 #[derive(Debug)]
 pub struct Token<'a> { 
-    token_type: TokenType,
-    lexeme: &'a str,                                    
-    literal: Option<LiteralValue<'a>>,                                     
-    line: i32                                                       
+    pub token_type: TokenType,
+    pub lexeme: &'a str,
+    pub literal: Option<LiteralValue<'a>>,
+    pub line: i32
 }
 
 #[derive(Debug)]
