@@ -25,13 +25,14 @@ impl<'a> Scanner<'a> {
             if chars.peek().is_none() {
                 break;
             }
-            self.scan_token(&mut chars);
+            self.scan_token(&mut chars)?;
+            self.start = self.current;
         }
         self.tokens.push(Token {lexeme: "", line: self.line, literal: None, token_type: TokenType::EOF});
         Ok(())
     }
 
-    fn scan_token(&mut self, chars: &mut Peekable<Chars<'_>>) {
+    fn scan_token(&mut self, chars: &mut Peekable<Chars<'_>>) -> Result<(), LoxError> {
         // we can unwrap here, since we peeked before this and know that the result is Some not None
         let s = self.advance(chars).unwrap();
         match s {
@@ -65,8 +66,9 @@ impl<'a> Scanner<'a> {
                 self.line += 1;
             }
 
-            _ => println!("unexpected char")
+            _ => return Err(LoxError { kind: crate::error::LoxErrorKind::ScannerError, message: "scanner error" })
         }
+        Ok(())
     }
 
     fn advance(&mut self, chars: &mut Peekable<Chars<'_>>) -> Option<char> {
@@ -85,7 +87,8 @@ impl<'a> Scanner<'a> {
     }
 
     fn add_token(&mut self, token_type: TokenType) {
-        let token = Token {token_type: token_type, lexeme: "a", literal: None, line: self.line};
+        let lexeme = &self.source[self.start..self.current];
+        let token = Token {token_type: token_type, lexeme: lexeme, literal: None, line: self.line};
         self.tokens.push(token);
     }
 }
