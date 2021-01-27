@@ -4,7 +4,7 @@ use std::io;
 use std::process;
 
 use error::LoxError;
-use io::{Write, stdout};
+use io::{Write};
 
 mod scan;
 mod tokens;
@@ -58,7 +58,7 @@ impl Interpreter {
         let result = scanner.scan();
         match result {
             Ok(_) => {
-                print!("{:?}", scanner.tokens)
+                println!("{:?}", scanner.tokens)
             },
             Err(e) => self.error(e)
         }

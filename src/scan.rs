@@ -62,9 +62,26 @@ impl<'a> Scanner<'a> {
                 let tt = if self.match_next('=', chars) { TokenType::GreaterEqual } else { TokenType::Greater };
                 self.add_token(tt);
             },
+            '/' => {
+                if self.match_next('/', chars) {
+                    // if you see '//' keep consuming characters until '\n'
+                    loop {
+                        if let Some(c) = chars.peek() {
+                            if c == &'\n' {
+                                break;
+                            } else {
+                                self.advance(chars);
+                            }
+                        }
+                    }
+                } else {
+                    self.add_token(TokenType::Slash);
+                }
+            },
+            ' ' | '\t' | '\r' => {},
             '\n' => {
                 self.line += 1;
-            }
+            },
 
             _ => return Err(LoxError { kind: crate::error::LoxErrorKind::ScannerError, message: "scanner error" })
         }
