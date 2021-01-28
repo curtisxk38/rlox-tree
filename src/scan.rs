@@ -36,31 +36,31 @@ impl<'a> Scanner<'a> {
         // we can unwrap here, since we peeked before this and know that the result is Some not None
         let s = self.advance(chars).unwrap();
         match s {
-            '(' => self.add_token(TokenType::LeftParen),
-            ')' => self.add_token(TokenType::RightParen),
-            '{' => self.add_token(TokenType::LeftBrace),
-            '}' => self.add_token(TokenType::RightBrace),
-            ',' => self.add_token(TokenType::Comma),
-            '.' => self.add_token(TokenType::Dot),
-            '-' => self.add_token(TokenType::Minus),
-            '+' => self.add_token(TokenType::Plus),
-            ';' => self.add_token(TokenType::Semicolon),
-            '*' => self.add_token(TokenType::Star),
+            '(' => self.add_simple_token(TokenType::LeftParen),
+            ')' => self.add_simple_token(TokenType::RightParen),
+            '{' => self.add_simple_token(TokenType::LeftBrace),
+            '}' => self.add_simple_token(TokenType::RightBrace),
+            ',' => self.add_simple_token(TokenType::Comma),
+            '.' => self.add_simple_token(TokenType::Dot),
+            '-' => self.add_simple_token(TokenType::Minus),
+            '+' => self.add_simple_token(TokenType::Plus),
+            ';' => self.add_simple_token(TokenType::Semicolon),
+            '*' => self.add_simple_token(TokenType::Star),
             '!' => {
                 let tt = if self.match_next('=', chars) { TokenType::BangEqual } else { TokenType::Bang };
-                self.add_token(tt);
+                self.add_simple_token(tt);
             },
             '=' => {
                 let tt = if self.match_next('=', chars) { TokenType::EqualEqual } else { TokenType::Equal };
-                self.add_token(tt);
+                self.add_simple_token(tt);
             },
             '<' => {
                 let tt = if self.match_next('=', chars) { TokenType::LessEqual } else { TokenType::Less };
-                self.add_token(tt)
+                self.add_simple_token(tt)
             },
             '>' => {
                 let tt = if self.match_next('=', chars) { TokenType::GreaterEqual } else { TokenType::Greater };
-                self.add_token(tt);
+                self.add_simple_token(tt);
             },
             '/' => {
                 if self.match_next('/', chars) {
@@ -75,17 +75,19 @@ impl<'a> Scanner<'a> {
                         }
                     }
                 } else {
-                    self.add_token(TokenType::Slash);
+                    self.add_simple_token(TokenType::Slash);
                 }
             },
             ' ' | '\t' | '\r' => {},
             '\n' => {
                 self.line += 1;
             },
+            '"' => {
+                return self.scan_string(chars);
+            }
             '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
                 return self.scan_number(s, chars)
             }
-
             _ => return Err(LoxError { kind: crate::error::LoxErrorKind::ScannerError, message: "scanner error" })
         }
         Ok(())
@@ -106,10 +108,36 @@ impl<'a> Scanner<'a> {
         return false;
     }
 
-    fn add_token(&mut self, token_type: TokenType) {
+    fn add_simple_token(&mut self, token_type: TokenType) {
         let lexeme = &self.source[self.start..self.current];
         let token = Token {token_type: token_type, lexeme: lexeme, literal: None, line: self.line};
         self.tokens.push(token);
+    }
+
+    fn scan_string(&mut self, chars: &mut Peekable<Chars<'_>>) -> Result<(), LoxError> {
+        let mut literal = String::new();
+        loop {
+            match self.advance(chars) {
+                Some(char) => {
+                    if char == '"' {
+                        // reached end of string literal
+                        break;
+                    } else {
+                        literal.push(char);
+                        if char == '\n' {
+                            self.line += 1;
+                        }
+                    }
+                },
+                None => {
+                    return Err(LoxError { kind: LoxErrorKind::ScannerError, message: "untermianted string "});
+                }
+            }
+        }
+        let lexeme = &self.source[self.start..self.current];
+        self.tokens.push( Token { token_type: TokenType::String, line: self.line,
+             lexeme: lexeme, literal: Some(LiteralValue::StringValue(literal))});
+        Ok(())
     }
 
     fn scan_number(&mut self, first_digit: char, chars: &mut Peekable<Chars<'_>>) -> Result<(), LoxError> {

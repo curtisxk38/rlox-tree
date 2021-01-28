@@ -11,7 +11,7 @@ pub enum TokenType {
     Less, LessEqual,                                
 
     // Literals.                                     
-    Identifier, Strin, Number,                      
+    Identifier, String, Number,
 
     // Keywords.                                     
     And, Class, Else, False, Fun, For, If, Nil, Or,  
@@ -24,14 +24,14 @@ pub enum TokenType {
 pub struct Token<'a> { 
     pub token_type: TokenType,
     pub lexeme: &'a str,
-    pub literal: Option<LiteralValue<'a>>,
+    pub literal: Option<LiteralValue>,
     pub line: i32
 }
 
 #[derive(Debug)]
-pub enum LiteralValue<'a> {
+pub enum LiteralValue {
     NumberValue(f64),
-    StringValue(&'a str),
+    StringValue(String),
     BooleanValue(bool),
     NilValue
 }
