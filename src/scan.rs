@@ -88,7 +88,13 @@ impl<'a> Scanner<'a> {
             '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
                 return self.scan_number(s, chars)
             }
-            _ => return Err(LoxError { kind: crate::error::LoxErrorKind::ScannerError, message: "scanner error" })
+            _ => {
+                if s.is_alphabetic() {
+                    return self.scan_alphabetic(chars)
+                } else {
+                    return Err(LoxError { kind: crate::error::LoxErrorKind::ScannerError, message: "unexpected character" })
+                }
+            }
         }
         Ok(())
     }
@@ -194,5 +200,46 @@ impl<'a> Scanner<'a> {
         } else {
             Err(LoxError { kind: LoxErrorKind::ScannerError, message: "unable to parse float"})
         }
+    }
+
+    fn scan_alphabetic(&mut self, chars: &mut Peekable<Chars<'_>>) -> Result<(), LoxError> {
+        loop {
+            if let Some(possible_alphabetic) = chars.peek() {
+                if possible_alphabetic.is_alphabetic() {
+                    self.advance(chars);
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        };
+        let lexeme = &self.source[self.start..self.current];
+        let token_type = match lexeme {
+            "and" => TokenType::And,
+            "class" => TokenType::Class,
+            "else" => TokenType::Else,
+            "false" => TokenType::False,
+            "for" => TokenType::For,
+            "if" => TokenType::If,
+            "nil" => TokenType::Nil,
+            "or" => TokenType::Or,
+            "print" => TokenType::Print,
+            "return" => TokenType::Return,
+            "super" => TokenType::Super,
+            "this" => TokenType::This,
+            "true" => TokenType::True,
+            "var" => TokenType::Var,
+            "while" => TokenType::While,
+            _ => TokenType::Identifier
+        };
+        let literal = match &token_type {
+            TokenType::False => Some(LiteralValue::BooleanValue(false)),
+            TokenType::True => Some(LiteralValue::BooleanValue(true)),
+            TokenType::Nil => Some(LiteralValue::NilValue),
+            _ => None
+        };
+        self.tokens.push(Token {token_type: token_type, line: self.line, lexeme: lexeme, literal: literal});
+        Ok(())
     }
 }
