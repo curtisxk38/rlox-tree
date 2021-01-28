@@ -121,7 +121,6 @@ impl<'a> Scanner<'a> {
     }
 
     fn scan_string(&mut self, chars: &mut Peekable<Chars<'_>>) -> Result<(), LoxError> {
-        let mut literal = String::new();
         loop {
             match self.advance(chars) {
                 Some(char) => {
@@ -129,7 +128,6 @@ impl<'a> Scanner<'a> {
                         // reached end of string literal
                         break;
                     } else {
-                        literal.push(char);
                         if char == '\n' {
                             self.line += 1;
                         }
@@ -141,6 +139,9 @@ impl<'a> Scanner<'a> {
             }
         }
         let lexeme = &self.source[self.start..self.current];
+        // the lexeme includes the literal ", but we don't want the String to include this
+        //  so we don't include the first and last chars of the lexeme
+        let literal = String::from(&self.source[self.start+1..self.current-1]);
         self.tokens.push( Token { token_type: TokenType::String, line: self.line,
              lexeme: lexeme, literal: Some(LiteralValue::StringValue(literal))});
         Ok(())
