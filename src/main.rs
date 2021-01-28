@@ -5,21 +5,24 @@ use std::process;
 
 use error::LoxError;
 use io::{Write};
+use tree_walker::TreeWalker;
 
 mod scan;
 mod tokens;
 mod parse;
 mod error;
 mod ast;
+mod tree_walker;
 
 struct Interpreter {
-    had_error: bool
+    had_error: bool,
+    tree_walker: tree_walker::TreeWalker,
 }
 
 impl Interpreter {
 
     pub fn new() -> Interpreter {
-        return Interpreter { had_error: false};
+        return Interpreter { had_error: false, tree_walker: TreeWalker {} };
     }
 
     fn run_file(&mut self, filename: &String) {
@@ -59,7 +62,14 @@ impl Interpreter {
         match scanner.scan() {
             Ok(_) => {
                 let parser = parse::Parser{};
-                println!("{:?}", parser.parse(&scanner.tokens));
+                let parsed = parser.parse(&scanner.tokens);
+                match parsed {
+                    Ok(ast) => {
+                        let interpreted = self.tree_walker.visit_expr(&ast);
+                        println!("{:?}", interpreted);
+                    },
+                    Err(e) => self.error(e)
+                }
 
             },
             Err(e) => self.error(e)

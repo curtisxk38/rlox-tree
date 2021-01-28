@@ -14,6 +14,7 @@ pub struct LoxError {
 pub enum LoxErrorKind {
     ScannerError,
     SyntaxError,
+    TypeError,
 }
 
 impl Error for LoxError {}
@@ -22,7 +23,8 @@ impl fmt::Display for LoxError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.kind {
             LoxErrorKind::ScannerError => write!(f, "ScannerError"),
-            LoxErrorKind::SyntaxError => write!(f, "SyntaxError")
+            LoxErrorKind::SyntaxError => write!(f, "SyntaxError"),
+            LoxErrorKind::TypeError => write!(f, "TypeError"),
         }
     }
 }
