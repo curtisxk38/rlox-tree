@@ -10,6 +10,7 @@ mod scan;
 mod tokens;
 mod parse;
 mod error;
+mod ast;
 
 struct Interpreter {
     had_error: bool
@@ -55,10 +56,11 @@ impl Interpreter {
 
     fn run(&mut self, input: &String) {
         let mut scanner = scan::Scanner::new(input);
-        let result = scanner.scan();
-        match result {
+        match scanner.scan() {
             Ok(_) => {
-                println!("{:?}", scanner.tokens)
+                let parser = parse::Parser{};
+                parser.parse(&scanner.tokens)
+
             },
             Err(e) => self.error(e)
         }
