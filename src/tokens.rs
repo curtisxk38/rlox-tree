@@ -28,7 +28,7 @@ pub struct Token<'a> {
     pub line: i32
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LiteralValue {
     NumberValue(f64),
     StringValue(String),

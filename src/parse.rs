@@ -1,6 +1,7 @@
-use std::{iter::Peekable, slice::Iter};
+use std::{iter::Peekable, slice::Iter, todo};
 
-use crate::tokens::Token;
+use crate::{ast::{Binary, Expr, Literal, Unary, UnaryOperator, Variable}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
+use crate::ast::{BinaryOperator};
 
 
 pub(crate) struct Parser {
@@ -10,44 +11,165 @@ pub(crate) struct Parser {
 impl Parser {
 
     // program -> expression* EOF ;
-    pub fn parse(&self, tokens: &Vec<Token>) {
-        let tokens = tokens.iter().peekable();
-        self.expression(tokens)
+    pub fn parse<'a>(&self, tokens: &'a Vec<Token>) -> Result<Expr<'a>, LoxError> {
+        let mut tokens = tokens.iter().peekable();
+        self.expression(&mut tokens)
     }
 
     // expression -> equality
-    fn expression(&self, tokens: Peekable<Iter<Token>>) {
+    fn expression<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
         self.equality(tokens)
     }
 
     // equality -> comparison ( ( "!=" | "==" ) comparison )* ;
-    fn equality(&self, tokens: Peekable<Iter<Token>>) {
-
+    fn equality<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+        let mut expr = self.comparison(tokens)?;
+        loop {
+            let operator;
+            let token;
+            match &tokens.peek().unwrap().token_type {
+                TokenType::BangEqual => {
+                    token = tokens.next().unwrap();
+                    operator = BinaryOperator::BangEqual;
+                },
+                TokenType::EqualEqual => {
+                    token = tokens.next().unwrap();
+                    operator = BinaryOperator::EqualEqual;
+                }
+                _ => break
+            }
+            let right = self.comparison(tokens)?;
+            expr = Expr::Binary(Binary {token: token, operator: operator, left: Box::new(expr), right: Box::new(right)});
+        };
+        Ok(expr)
     }
 
     // comparison -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-    fn comparison(&self, tokens: Peekable<Iter<Token>>) {
-
+    fn comparison<'a>(& self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+        let mut expr = self.term(tokens)?;
+        loop {
+            let operator;
+            let token;
+            match &tokens.peek().unwrap().token_type {
+                TokenType::Greater => {
+                    token = tokens.next().unwrap();
+                    operator = BinaryOperator::Greater;
+                },
+                TokenType::GreaterEqual => {
+                    token = tokens.next().unwrap();
+                    operator = BinaryOperator::GreaterEqual;
+                },
+                TokenType::Less => {
+                    token = tokens.next().unwrap();
+                    operator = BinaryOperator::Less;
+                },
+                TokenType::LessEqual => {
+                    token = tokens.next().unwrap();
+                    operator = BinaryOperator::LessEqual;
+                },
+                _ => break
+            }
+            let right = self.term(tokens)?;
+            expr = Expr::Binary(Binary {token: token, operator: operator, left: Box::new(expr), right: Box::new(right)});
+        };
+        Ok(expr)
     }
 
     // term -> factor ( ( "-" | "+") factor )* ;
-    fn term(&self, tokens: Peekable<Iter<Token>>) {
-
+    fn term<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+        let mut expr = self.factor(tokens)?;
+        loop {
+            let operator;
+            let token;
+            match &tokens.peek().unwrap().token_type {
+                TokenType::Minus => {
+                    token = tokens.next().unwrap();
+                    operator = BinaryOperator::Minus;
+                },
+                TokenType::Plus => {
+                    token = tokens.next().unwrap();
+                    operator = BinaryOperator::Plus;
+                },
+                _ => break
+            }
+            let right = self.factor(tokens)?;
+            expr = Expr::Binary(Binary {token: token, operator: operator, left: Box::new(expr), right: Box::new(right)});
+        }
+        Ok(expr)
     }
 
     // factor -> unary ( ( "/" | "*") unary )* ;
-    fn factor(&self, tokens: Peekable<Iter<Token>>) {
-
+    fn factor<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError>{
+        let mut expr = self.unary(tokens)?;
+        loop {
+            let operator;
+            let token;
+            match &tokens.peek().unwrap().token_type {
+                TokenType::Slash => {
+                    token = tokens.next().unwrap();
+                    operator = BinaryOperator::Slash;
+                },
+                TokenType::Star => {
+                    token = tokens.next().unwrap();
+                    operator = BinaryOperator::Star;
+                },
+                _ => break
+            }
+            let right = self.unary(tokens)?;
+            expr = Expr::Binary(Binary {token: token, operator: operator, left: Box::new(expr), right: Box::new(right)});
+        }
+        Ok(expr)
     }
 
     // unary -> ( "!" | "-" ) unary
     //       | primary ;
-    fn unary(&self, tokens: Peekable<Iter<Token>>) {
-
+    fn unary<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+        match &tokens.peek().unwrap().token_type {
+            TokenType::Bang => {
+                let token = tokens.next().unwrap();
+                let operator = UnaryOperator::Bang;
+                let right = self.unary(tokens)?;
+                Ok(Expr::Unary(Unary {operator: operator, token: token, right: Box::new(right)}))
+            },
+            TokenType::Minus => {
+                let token = tokens.next().unwrap();
+                let operator = UnaryOperator::Minus;
+                let right = self.unary(tokens)?;
+                Ok(Expr::Unary(Unary {operator: operator, token: token, right: Box::new(right)}))
+            }
+            _ => {
+                self.primary(tokens)
+            }
+        }
     }
 
     // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
-    fn primary(&self, tokens: Peekable<Iter<Token>>) {
-        
+    fn primary<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+        match &tokens.peek().unwrap().token_type {
+            TokenType::False | TokenType::True | TokenType::Number | TokenType::String | TokenType::Nil => {
+                let token = tokens.next().unwrap();
+                let value = token.literal.clone().unwrap();
+                Ok(Expr::Literal(Literal { token, value }))
+            },
+            TokenType::Identifier => {
+                Ok(Expr::Variable(Variable { token: tokens.next().unwrap() }))
+            },
+            TokenType::LeftParen => {
+                tokens.next(); // consume '('
+                let expr = self.expression(tokens)?;
+                match &tokens.peek().unwrap().token_type {
+                    TokenType::RightParen => {
+                        tokens.next() // consume matching ')'
+                    },
+                    _ => {
+                        return Err(LoxError {kind: LoxErrorKind::ScannerError, message: "expected ')' after expression"})
+                    }
+                };
+                Ok(expr)
+            }
+            _ => {
+                Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "invalid syntax"})
+            }
+        }
     }
 }

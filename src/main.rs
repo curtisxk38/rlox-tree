@@ -59,7 +59,7 @@ impl Interpreter {
         match scanner.scan() {
             Ok(_) => {
                 let parser = parse::Parser{};
-                parser.parse(&scanner.tokens)
+                println!("{:?}", parser.parse(&scanner.tokens));
 
             },
             Err(e) => self.error(e)

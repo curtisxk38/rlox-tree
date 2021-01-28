@@ -2,6 +2,8 @@
 use core::fmt;
 use std::error::Error;
 
+use crate::tokens::Token;
+
 #[derive(Debug)]
 pub struct LoxError {
     pub message: &'static str,
@@ -10,7 +12,8 @@ pub struct LoxError {
 
 #[derive(Debug)]
 pub enum LoxErrorKind {
-    ScannerError
+    ScannerError,
+    SyntaxError,
 }
 
 impl Error for LoxError {}
@@ -18,7 +21,8 @@ impl Error for LoxError {}
 impl fmt::Display for LoxError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.kind {
-            LoxErrorKind::ScannerError => write!(f, "ScannerError")
+            LoxErrorKind::ScannerError => write!(f, "ScannerError"),
+            LoxErrorKind::SyntaxError => write!(f, "SyntaxError")
         }
     }
 }
