@@ -86,7 +86,7 @@ impl<'a> Scanner<'a> {
                 return self.scan_string(chars);
             }
             '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
-                return self.scan_number(s, chars)
+                return self.scan_number(chars)
             }
             _ => {
                 if s.is_alphabetic() {
@@ -146,14 +146,12 @@ impl<'a> Scanner<'a> {
         Ok(())
     }
 
-    fn scan_number(&mut self, first_digit: char, chars: &mut Peekable<Chars<'_>>) -> Result<(), LoxError> {
-        let mut lexeme = String::new();
-        lexeme.push(first_digit);
+    fn scan_number(&mut self, chars: &mut Peekable<Chars<'_>>) -> Result<(), LoxError> {
         loop {
             if let Some(next) = chars.peek() {
                 match next {
                     '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
-                        lexeme.push(self.advance(chars).unwrap());
+                        self.advance(chars);
                     },
                     '.' => {
                         let mut peek_more = chars.clone();
@@ -161,13 +159,13 @@ impl<'a> Scanner<'a> {
                         if let Some(after_dot) = peek_more.next() {
                             match after_dot {
                                 '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
-                                    lexeme.push(self.advance(chars).unwrap()); // this pushes the '.'
-                                    // now keep pushing numbers as you see them
+                                    self.advance(chars); // this consumes the '.'
+                                    // now keep consuming numbers as you see them
                                     loop {
                                         if let Some(number_after_dot) = chars.peek() {
                                             match number_after_dot {
                                                 '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => { 
-                                                    lexeme.push(self.advance(chars).unwrap());
+                                                    self.advance(chars);
                                                 },
                                                 _ => break
                                             }
@@ -191,10 +189,10 @@ impl<'a> Scanner<'a> {
             }
         }
 
+        let lexeme = &self.source[self.start..self.current];
         let number_conversion = lexeme.parse::<f64>();
         if let Ok(number) = number_conversion {
             let literal = Some(LiteralValue::NumberValue(number));
-            let lexeme = &self.source[self.start..self.current];
             self.tokens.push( Token { token_type: TokenType::Number, line: self.line, lexeme: lexeme, literal: literal});
             Ok(())
         } else {
