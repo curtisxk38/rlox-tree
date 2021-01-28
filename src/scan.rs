@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
-use crate::{error::LoxError, tokens::Token};
+use crate::{error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token}};
 use crate::tokens::TokenType;
 
 pub(crate) struct Scanner<'a> {
@@ -82,6 +82,9 @@ impl<'a> Scanner<'a> {
             '\n' => {
                 self.line += 1;
             },
+            '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
+                return self.scan_number(s, chars)
+            }
 
             _ => return Err(LoxError { kind: crate::error::LoxErrorKind::ScannerError, message: "scanner error" })
         }
@@ -107,5 +110,61 @@ impl<'a> Scanner<'a> {
         let lexeme = &self.source[self.start..self.current];
         let token = Token {token_type: token_type, lexeme: lexeme, literal: None, line: self.line};
         self.tokens.push(token);
+    }
+
+    fn scan_number(&mut self, first_digit: char, chars: &mut Peekable<Chars<'_>>) -> Result<(), LoxError> {
+        let mut lexeme = String::new();
+        lexeme.push(first_digit);
+        loop {
+            if let Some(next) = chars.peek() {
+                match next {
+                    '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
+                        lexeme.push(self.advance(chars).unwrap());
+                    },
+                    '.' => {
+                        let mut peek_more = chars.clone();
+                        peek_more.next(); // consume the '.' in this interator
+                        if let Some(after_dot) = peek_more.next() {
+                            match after_dot {
+                                '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
+                                    lexeme.push(self.advance(chars).unwrap()); // this pushes the '.'
+                                    // now keep pushing numbers as you see them
+                                    loop {
+                                        if let Some(number_after_dot) = chars.peek() {
+                                            match number_after_dot {
+                                                '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => { 
+                                                    lexeme.push(self.advance(chars).unwrap());
+                                                },
+                                                _ => break
+                                            }
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                },
+                                _ => break
+                            }
+                        } else {
+                            break;
+                        }
+                    },
+                    _ => {
+                        break;
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+
+        let number_conversion = lexeme.parse::<f64>();
+        if let Ok(number) = number_conversion {
+            let literal = Some(LiteralValue::NumberValue(number));
+            let lexeme = &self.source[self.start..self.current];
+            self.tokens.push( Token { token_type: TokenType::Number, line: self.line, lexeme: lexeme, literal: literal});
+            Ok(())
+        } else {
+            Err(LoxError { kind: LoxErrorKind::ScannerError, message: "unable to parse float"})
+        }
     }
 }
