@@ -1,4 +1,4 @@
-use crate::{ast::{Binary, BinaryOperator, Expr, Literal, Unary, Variable}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
+use crate::{ast::{Binary, BinaryOperator, Expr, Literal, Unary, UnaryOperator, Variable}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
 
 
 pub(crate) struct TreeWalker {
@@ -112,7 +112,18 @@ impl TreeWalker {
     }
 
     fn visit_unary(&self, expr: &Unary) -> Result<Value, LoxError> {
-        todo!()
+        let right = self.visit_expr(expr.right.as_ref())?;
+        match &expr.operator {
+            UnaryOperator::Bang => {
+                Ok(Value::BooleanValue(self.is_truthy(&right)))
+            },
+            UnaryOperator::Minus => {
+                match right {
+                    Value::NumberValue(n) => Ok(Value::NumberValue(n * -1.0)),
+                    _ => Err(LoxError {kind: LoxErrorKind::TypeError, message: "unsupported operant types"})
+                }
+            }
+        }
     }
 
     fn visit_literal(&self, expr: &Literal) -> Result<Value, LoxError> {
@@ -143,6 +154,16 @@ impl TreeWalker {
                true
             }
             _ => false
+        }
+    }
+
+    fn is_truthy(&self, val: &Value) -> bool {
+        // false and nil are falsey, everything else is truthy
+        match val {
+            Value::BooleanValue(b) => b.to_owned(),
+            Value::NilValue => false,
+            Value::NumberValue(_) => true,
+            Value::StringValue(_) => true,
         }
     }
 }
