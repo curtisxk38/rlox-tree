@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter, todo};
 
-use crate::{ast::{Binary, Expr, Literal, Unary, UnaryOperator, Variable}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
+use crate::{ast::{Binary, Expr, ExpressionStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, Variable}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -10,10 +10,53 @@ pub(crate) struct Parser {
 
 impl Parser {
 
-    // program -> expression* EOF ;
-    pub fn parse<'a>(&self, tokens: &'a Vec<Token>) -> Result<Expr<'a>, LoxError> {
+    // program -> statement EOF ;
+    pub fn parse<'a>(&self, tokens: &'a Vec<Token>) -> Result<Statement<'a>, LoxError> {
         let mut tokens = tokens.iter().peekable();
-        self.expression(&mut tokens)
+        self.statement(&mut tokens)
+    }
+
+    // statement -> exprStatement
+    // | printStatement ;
+    fn statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+        match &tokens.peek().unwrap().token_type {
+            TokenType::Print => {
+                self.print_statement(tokens)
+            },
+            _ => {
+                // if the next token doesn't like any other statement, assume its an expr statement
+                self.expression_statement(tokens)
+            }
+        }
+    }
+
+    // printStatement -> "print" expression ";" ;
+    fn print_statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+        let token = tokens.next().unwrap(); // "print" token
+        let value = self.expression(tokens)?;
+        match &tokens.peek().unwrap().token_type {
+            TokenType::Semicolon => {
+                tokens.next(); // consume ";"
+            },
+            _ => {
+              return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ';' after statement"})  
+            }
+        };
+        Ok(Statement::PrintStatement(PrintStatement {token, value}))
+    }
+
+    // exprStatement -> expression ";" ;
+    fn expression_statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+        let expr = self.expression(tokens)?;
+        match &tokens.peek().unwrap().token_type {
+            TokenType::Semicolon => {
+                tokens.next(); // consume ";"
+            },
+            _ => {
+              return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ';' after statement"})  
+            }
+        };
+        Ok(Statement::ExpressionStatement(ExpressionStatement {expression: expr}))
     }
 
     // expression -> equality

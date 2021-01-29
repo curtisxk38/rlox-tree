@@ -65,8 +65,11 @@ impl Interpreter {
                 let parsed = parser.parse(&scanner.tokens);
                 match parsed {
                     Ok(ast) => {
-                        let interpreted = self.tree_walker.visit_expr(&ast);
-                        println!("{:?}", interpreted);
+                        let interpreted = self.tree_walker.visit_statement(&ast);
+                        match interpreted {
+                            Ok(_) => {},
+                            Err(e) => self.error(e)
+                        }
                     },
                     Err(e) => self.error(e)
                 }

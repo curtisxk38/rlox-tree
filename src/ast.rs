@@ -54,3 +54,17 @@ pub(crate) struct Literal<'a> {
 pub(crate) struct Variable<'a> {
     pub token: &'a Token<'a>
 }
+
+pub(crate) enum Statement<'a> {
+    ExpressionStatement(ExpressionStatement<'a>),
+    PrintStatement(PrintStatement<'a>)
+}
+
+pub(crate) struct ExpressionStatement<'a> {
+    pub expression: Expr<'a>
+}
+
+pub(crate) struct PrintStatement<'a> {
+    pub token: &'a Token<'a>,
+    pub value: Expr<'a>
+}

@@ -1,4 +1,6 @@
-use crate::{ast::{Binary, BinaryOperator, Expr, Literal, Unary, UnaryOperator, Variable}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
+use std::{fmt::{Display}};
+
+use crate::{ast::{Binary, BinaryOperator, Expr, ExpressionStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, Variable}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
 
 
 pub(crate) struct TreeWalker {
@@ -13,8 +15,41 @@ pub(crate) enum Value {
     NilValue
 }
 
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            Value::NumberValue(n) => write!(f, "{}", n),
+            Value::StringValue(n) => write!(f, "{}", n),
+            Value::BooleanValue(n) => write!(f, "{}", n),
+            Value::NilValue => write!(f, "nil"),
+        }
+    }
+}
+
 impl TreeWalker {
-    pub fn visit_expr(&self, expr: &Expr) -> Result<Value, LoxError> {
+    pub fn visit_statement(&self, stmt: &Statement) -> Result<(), LoxError> {
+        match stmt {
+            Statement::PrintStatement(p) => {
+                self.visit_print_statement(p)
+            },
+            Statement::ExpressionStatement(e) => {
+                self.visit_expression_statement(e)
+            }
+        }
+    }
+
+    fn visit_print_statement(&self, stmt: &PrintStatement) -> Result<(), LoxError> {
+        let value = self.visit_expr(&stmt.value)?;
+        println!("{}", value);
+        Ok(())
+    }
+
+    fn visit_expression_statement(&self, stmt: &ExpressionStatement) -> Result<(), LoxError> {
+        self.visit_expr(&stmt.expression)?;
+        Ok(())
+    }
+
+    fn visit_expr(&self, expr: &Expr) -> Result<Value, LoxError> {
         match expr {
             Expr::Binary(e) => {
                 self.visit_binary(e)
