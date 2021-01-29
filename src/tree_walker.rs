@@ -35,23 +35,79 @@ impl TreeWalker {
         let left = self.visit_expr(expr.left.as_ref())?;
         let right = self.visit_expr(expr.right.as_ref())?;
         match expr.operator {
-            BinaryOperator::BangEqual => todo!(),
-            BinaryOperator::EqualEqual => todo!(),
-            BinaryOperator::Greater => todo!(),
-            BinaryOperator::GreaterEqual => todo!(),
-            BinaryOperator::Less => todo!(),
-            BinaryOperator::LessEqual => todo!(),
-            BinaryOperator::Minus => todo!(),
+            BinaryOperator::BangEqual => {
+                Ok(Value::BooleanValue(!self.is_equal(&left, &right)))
+            }
+            BinaryOperator::EqualEqual => {
+                Ok(Value::BooleanValue(self.is_equal(&left, &right)))
+            }
+            BinaryOperator::Greater => {
+                match (left, right) {
+                    (Value::NumberValue(l), Value::NumberValue(r)) => {
+                        Ok(Value::BooleanValue(l > r))
+                    }
+                    _ => Err(LoxError {kind: LoxErrorKind::TypeError, message: "unsupported operand types"})
+                }
+            }
+            BinaryOperator::GreaterEqual => {
+                match (left, right) {
+                    (Value::NumberValue(l), Value::NumberValue(r)) => {
+                        Ok(Value::BooleanValue(l >= r))
+                    }
+                    _ => Err(LoxError {kind: LoxErrorKind::TypeError, message: "unsupported operand types"})
+                }
+            }
+            BinaryOperator::Less => {
+                match (left, right) {
+                    (Value::NumberValue(l), Value::NumberValue(r)) => {
+                        Ok(Value::BooleanValue(l < r))
+                    }
+                    _ => Err(LoxError {kind: LoxErrorKind::TypeError, message: "unsupported operand types"})
+                }
+            }
+            BinaryOperator::LessEqual => {
+                match (left, right) {
+                    (Value::NumberValue(l), Value::NumberValue(r)) => {
+                        Ok(Value::BooleanValue(l <= r))
+                    }
+                    _ => Err(LoxError {kind: LoxErrorKind::TypeError, message: "unsupported operand types"})
+                }
+            }
+            BinaryOperator::Minus => {
+                match (left, right) {
+                    (Value::NumberValue(l), Value::NumberValue(r)) => {
+                        Ok(Value::NumberValue(l - r))
+                    }
+                    _ => Err(LoxError {kind: LoxErrorKind::TypeError, message: "unsupported operand types"})
+                }
+            }
             BinaryOperator::Plus => {
                 match (left, right) {
                     (Value::NumberValue(l), Value::NumberValue(r)) => {
-                        Ok(Value::NumberValue(l+r))
+                        Ok(Value::NumberValue(l + r))
                     },
+                    (Value::StringValue(l), Value::StringValue(r)) => {
+                        Ok(Value::StringValue(format!("{}{}", l, r)))
+                    }
                     _ => Err(LoxError {kind: LoxErrorKind::TypeError, message: "unsupported operand types"})
                 }
             },
-            BinaryOperator::Slash => todo!(),
-            BinaryOperator::Star => todo!(),
+            BinaryOperator::Slash => {
+                match (left, right) {
+                    (Value::NumberValue(l), Value::NumberValue(r)) => {
+                        Ok(Value::NumberValue(l / r))
+                    }
+                    _ => Err(LoxError {kind: LoxErrorKind::TypeError, message: "unsupported operand types"})
+                }
+            }
+            BinaryOperator::Star => {
+                match (left, right) {
+                    (Value::NumberValue(l), Value::NumberValue(r)) => {
+                        Ok(Value::NumberValue(l * r))
+                    }
+                    _ => Err(LoxError {kind: LoxErrorKind::TypeError, message: "unsupported operand types"})
+                }
+            },
         }
     }
 
@@ -70,5 +126,23 @@ impl TreeWalker {
 
     fn visit_variable(&self, expr: &Variable) -> Result<Value, LoxError> {
         todo!()
+    }
+
+    fn is_equal(&self, left: &Value, right: &Value) -> bool {
+        match (left, right) {
+            (Value::NumberValue(l), Value::NumberValue(r)) => {
+               l == r
+            },
+            (Value::StringValue(l), Value::StringValue(r)) => {
+               l == r
+            },
+            (Value::BooleanValue(l), Value::BooleanValue(r)) => {
+               l == r
+            },
+            (Value::NilValue, Value::NilValue) => {
+               true
+            }
+            _ => false
+        }
     }
 }
