@@ -4,16 +4,16 @@ use std::str::Chars;
 use crate::{error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token}};
 use crate::tokens::TokenType;
 
-pub(crate) struct Scanner<'a> {
-    source: &'a String,
-    pub tokens: Vec<Token<'a>>,
+pub(crate) struct Scanner<'c> {
+    source: &'c String,
+    pub tokens: Vec<Token<'c>>,
     start: usize,
     current: usize,
     line: i32
 }
 
-impl<'a> Scanner<'a> {
-    pub fn new(source: &'a String) -> Scanner<'a> {
+impl<'c> Scanner<'c> {
+    pub fn new(source: &'c String) -> Scanner<'c> {
         Scanner { source: source, tokens: Vec::<Token>::new(),
         start: 0, current: 0, line: 1 }
     }

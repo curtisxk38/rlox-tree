@@ -19,10 +19,10 @@ struct Interpreter {
     tree_walker: tree_walker::TreeWalker,
 }
 
-impl Interpreter {
+impl  Interpreter {
 
     pub fn new() -> Interpreter {
-        return Interpreter { had_error: false, tree_walker: TreeWalker {} };
+        return Interpreter { had_error: false, tree_walker: TreeWalker::new() };
     }
 
     fn run_file(&mut self, filename: &String) {
@@ -57,8 +57,8 @@ impl Interpreter {
         }
     }
 
-    fn run(&mut self, input: &String) {
-        let mut scanner = scan::Scanner::new(input);
+    fn run<'b>(&mut self, input: &'b String) {
+        let mut scanner = scan::Scanner::new(&input);
         match scanner.scan() {
             Ok(_) => {
                 let parser = parse::Parser{};

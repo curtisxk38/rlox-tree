@@ -1,13 +1,45 @@
-use std::{fmt::{Display}};
+use std::{collections::HashMap, fmt::{Display}};
 
-use crate::{ast::{Binary, BinaryOperator, Expr, ExpressionStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, Variable}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
+use crate::{ast::{Binary, BinaryOperator, Expr, ExpressionStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
 
 
+#[derive(Debug)]
 pub(crate) struct TreeWalker {
-
+    environment: Environment
 }
 
 #[derive(Debug)]
+struct Environment {
+    values: HashMap<String, Value>
+}
+
+impl Environment {
+    fn new() -> Environment {
+        Environment { values: HashMap::new() }
+    }
+
+    fn define<'b>(&mut self, name: &'b str, value: Value) {
+        self.values.insert(name.to_string(), value);
+        // this means you can redine values
+        // valid program:
+        /*
+        var a = "first";
+        print a; //"first"
+        var a = "second";
+        print a; //"second"
+        */
+    }
+
+    fn get<'b>(&self, name: &'b str) -> Result<Value, LoxError> {
+        let result = self.values.get(name);
+        match result {
+            Some(v) => Ok(v.clone()),
+            None => Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub(crate) enum Value {
     NumberValue(f64),
     StringValue(String),
@@ -27,13 +59,20 @@ impl Display for Value {
 }
 
 impl TreeWalker {
-    pub fn visit_statement(&self, stmt: &Statement) -> Result<(), LoxError> {
+    pub fn new() -> TreeWalker {
+        TreeWalker { environment: Environment::new() }
+    }
+    
+    pub fn visit_statement<'b>(&mut self, stmt: &'b Statement) -> Result<(), LoxError> {
         match stmt {
             Statement::PrintStatement(p) => {
                 self.visit_print_statement(p)
             },
             Statement::ExpressionStatement(e) => {
                 self.visit_expression_statement(e)
+            }
+            Statement::VarDeclStatement(v) => {
+                self.visit_var_decl_statement(v)
             }
         }
     }
@@ -46,6 +85,17 @@ impl TreeWalker {
 
     fn visit_expression_statement(&self, stmt: &ExpressionStatement) -> Result<(), LoxError> {
         self.visit_expr(&stmt.expression)?;
+        Ok(())
+    }
+
+    fn visit_var_decl_statement<'b>(&mut self, stmt: &'b VarDeclStatement) -> Result<(), LoxError> {
+        // if you declare a variable without initializing it, it gets set to nil
+        // var x; // x is nil
+        let initial_value = match &stmt.initializer {
+            Some(e) => self.visit_expr(e)?,
+            None => Value::NilValue
+        };
+        self.environment.define(stmt.token.lexeme, initial_value);
         Ok(())
     }
 
@@ -171,7 +221,7 @@ impl TreeWalker {
     }
 
     fn visit_variable(&self, expr: &Variable) -> Result<Value, LoxError> {
-        todo!()
+        self.environment.get(expr.token.lexeme)
     }
 
     fn is_equal(&self, left: &Value, right: &Value) -> bool {

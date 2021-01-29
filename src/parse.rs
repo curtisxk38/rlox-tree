@@ -1,6 +1,6 @@
-use std::{iter::Peekable, slice::Iter, todo};
+use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Binary, Expr, ExpressionStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, Variable}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
+use crate::{ast::{Binary, Expr, ExpressionStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -20,11 +20,54 @@ impl Parser {
                     break
                 },
                 _ => {
-                    statements.push(self.statement(&mut tokens)?)
+                    statements.push(self.declaration(&mut tokens)?)
                 }
             }
         }
         Ok(statements)
+    }
+
+    // declaration -> varDecl | statement ;
+    fn declaration<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+        match &tokens.peek().unwrap().token_type {
+            TokenType::Var => {
+                self.var_declaration(tokens)
+            },
+            _ => self.statement(tokens)
+        }
+        // TODO synchronize on syntax errors here
+    }
+
+    fn var_declaration<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+        tokens.next(); // consume 'var'
+        let token;
+        match &tokens.peek().unwrap().token_type {
+            TokenType::Identifier => token = tokens.next().unwrap(),
+            _ => {
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected identifier"})
+            }
+        };
+
+        let initializer;
+        match &tokens.peek().unwrap().token_type {
+            TokenType::Equal => {
+                tokens.next(); // consume '='
+                initializer = Some(self.expression(tokens)?);
+            },
+            _ => {
+                initializer = None;
+            }
+        };
+
+        match &tokens.peek().unwrap().token_type {
+            TokenType::Semicolon => {
+                tokens.next(); // consume ";"
+            },
+            _ => {
+              return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ';' variable declaration"})  
+            }
+        };
+        Ok(Statement::VarDeclStatement(VarDeclStatement {token, initializer}))
     }
 
     // statement -> exprStatement
