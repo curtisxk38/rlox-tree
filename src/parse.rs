@@ -10,10 +10,21 @@ pub(crate) struct Parser {
 
 impl Parser {
 
-    // program -> statement EOF ;
-    pub fn parse<'a>(&self, tokens: &'a Vec<Token>) -> Result<Statement<'a>, LoxError> {
+    // program -> statement* EOF ;
+    pub fn parse<'a>(&self, tokens: &'a Vec<Token>) -> Result<Vec<Statement<'a>>, LoxError> {
         let mut tokens = tokens.iter().peekable();
-        self.statement(&mut tokens)
+        let mut statements: Vec<Statement> = Vec::new();
+        loop {
+            match &tokens.peek().unwrap().token_type {
+                TokenType::EOF => {
+                    break
+                },
+                _ => {
+                    statements.push(self.statement(&mut tokens)?)
+                }
+            }
+        }
+        Ok(statements)
     }
 
     // statement -> exprStatement

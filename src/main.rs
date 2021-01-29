@@ -64,12 +64,18 @@ impl Interpreter {
                 let parser = parse::Parser{};
                 let parsed = parser.parse(&scanner.tokens);
                 match parsed {
-                    Ok(ast) => {
-                        let interpreted = self.tree_walker.visit_statement(&ast);
-                        match interpreted {
-                            Ok(_) => {},
-                            Err(e) => self.error(e)
+                    Ok(statements) => {
+                        for statement in statements {
+                            let interpreted = self.tree_walker.visit_statement(&statement);
+                            match interpreted {
+                                Ok(_) => {},
+                                Err(e) => {
+                                    self.error(e);
+                                    break;
+                                }
+                            }
                         }
+                        
                     },
                     Err(e) => self.error(e)
                 }
