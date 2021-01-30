@@ -119,7 +119,10 @@ impl TreeWalker {
             }
             Expr::Literal(e) => {
                 self.visit_literal(e)
-            }
+            },
+            Expr::Grouping(e) => {
+                self.visit_expr(e.expr.as_ref())
+            },
             Expr::Variable(e) => {
                 self.visit_variable(e)
             }

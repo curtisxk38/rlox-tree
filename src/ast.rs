@@ -26,6 +26,7 @@ pub(crate) enum Expr<'a> {
     Binary(Binary<'a>),
     Unary(Unary<'a>),
     Literal(Literal<'a>),
+    Grouping(Grouping<'a>),
     Variable(Variable<'a>),
     Assignent(Assignent<'a>),
 }
@@ -49,6 +50,11 @@ pub(crate) struct Unary<'a> {
 pub(crate) struct Literal<'a> {
     pub token: &'a Token<'a>,
     pub value: LiteralValue,
+}
+
+#[derive(Debug)]
+pub(crate) struct Grouping<'a> {
+    pub expr: Box<Expr<'a>>
 }
 
 #[derive(Debug)]

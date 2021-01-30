@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Assignent, Binary, Expr, ExpressionStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
+use crate::{ast::{Assignent, Binary, Expr, ExpressionStatement, Grouping, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -350,7 +350,7 @@ impl Parser {
                         return Err(LoxError {kind: LoxErrorKind::ScannerError, message: "expected ')' after expression"})
                     }
                 };
-                Ok(expr)
+                Ok(Expr::Grouping(Grouping {expr: Box::new(expr)}))
             }
             _ => {
                 Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "invalid syntax"})
