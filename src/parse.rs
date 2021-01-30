@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Binary, Expr, ExpressionStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
+use crate::{ast::{Assignent, Binary, Expr, ExpressionStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -178,9 +178,32 @@ impl Parser {
         Ok(Statement::ExpressionStatement(ExpressionStatement {expression: expr}))
     }
 
-    // expression -> equality
+    // expression -> assignment ;
     fn expression<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
-        self.equality(tokens)
+        self.assignment(tokens)
+    }
+
+    // assignment -> IDENTIFIER "=" assignment | equality ;
+    fn assignment<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+        let expr = self.equality(tokens)?;
+
+        match &tokens.peek().unwrap().token_type {
+            TokenType::Equal => {
+                tokens.next().unwrap(); // consume "="
+                let value = self.assignment(tokens)?;
+                match &expr {
+                    Expr::Variable(v) => {
+                        let name = v.token;
+                        return Ok(Expr::Assignent(Assignent {token: name, value: Box::new(value)}));
+                    },
+                    _ => {}
+                };
+                Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "invalid assignment target"})
+            },
+            _ => {
+                Ok(expr)
+            }
+        }
     }
 
     // equality -> comparison ( ( "!=" | "==" ) comparison )* ;

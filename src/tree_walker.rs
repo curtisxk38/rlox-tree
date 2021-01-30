@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::{Display}};
 
-use crate::{ast::{Binary, BinaryOperator, Expr, ExpressionStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
+use crate::{ast::{Assignent, Binary, BinaryOperator, Expr, ExpressionStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
 
 
 #[derive(Debug)]
@@ -36,6 +36,16 @@ impl Environment {
             Some(v) => Ok(v.clone()),
             None => Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
         }
+    }
+
+    fn assign<'b>(&mut self, name: &'b str, value: Value) -> Result<Value, LoxError> {
+        if self.values.contains_key(name) {
+            self.values.insert(name.to_string(), value.clone());
+            Ok(value)
+        } else {
+            Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined" })
+        }
+        
     }
 }
 
@@ -77,13 +87,13 @@ impl TreeWalker {
         }
     }
 
-    fn visit_print_statement(&self, stmt: &PrintStatement) -> Result<(), LoxError> {
+    fn visit_print_statement(&mut self, stmt: &PrintStatement) -> Result<(), LoxError> {
         let value = self.visit_expr(&stmt.value)?;
         println!("{}", value);
         Ok(())
     }
 
-    fn visit_expression_statement(&self, stmt: &ExpressionStatement) -> Result<(), LoxError> {
+    fn visit_expression_statement(&mut self, stmt: &ExpressionStatement) -> Result<(), LoxError> {
         self.visit_expr(&stmt.expression)?;
         Ok(())
     }
@@ -99,7 +109,7 @@ impl TreeWalker {
         Ok(())
     }
 
-    fn visit_expr(&self, expr: &Expr) -> Result<Value, LoxError> {
+    fn visit_expr(&mut self, expr: &Expr) -> Result<Value, LoxError> {
         match expr {
             Expr::Binary(e) => {
                 self.visit_binary(e)
@@ -113,10 +123,13 @@ impl TreeWalker {
             Expr::Variable(e) => {
                 self.visit_variable(e)
             }
+            Expr::Assignent(e) => {
+                self.visit_assignment(e)
+            }
         }
     }
 
-    fn visit_binary(&self, expr: &Binary) -> Result<Value, LoxError> {
+    fn visit_binary(&mut self, expr: &Binary) -> Result<Value, LoxError> {
         let left = self.visit_expr(expr.left.as_ref())?;
         let right = self.visit_expr(expr.right.as_ref())?;
         match expr.operator {
@@ -196,7 +209,7 @@ impl TreeWalker {
         }
     }
 
-    fn visit_unary(&self, expr: &Unary) -> Result<Value, LoxError> {
+    fn visit_unary(&mut self, expr: &Unary) -> Result<Value, LoxError> {
         let right = self.visit_expr(expr.right.as_ref())?;
         match &expr.operator {
             UnaryOperator::Bang => {
@@ -222,6 +235,11 @@ impl TreeWalker {
 
     fn visit_variable(&self, expr: &Variable) -> Result<Value, LoxError> {
         self.environment.get(expr.token.lexeme)
+    }
+
+    fn visit_assignment(&mut self, expr: &Assignent) -> Result<Value, LoxError> {
+        let value = self.visit_expr(expr.value.as_ref())?;
+        self.environment.assign(expr.token.lexeme, value)
     }
 
     fn is_equal(&self, left: &Value, right: &Value) -> bool {
