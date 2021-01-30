@@ -77,7 +77,11 @@ impl  Interpreter {
                         }
                         
                     },
-                    Err(e) => self.error(e)
+                    Err(errors) => {
+                        for error in errors {
+                            self.error(error);
+                        }
+                    }
                 }
 
             },

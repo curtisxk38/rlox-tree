@@ -11,20 +11,86 @@ pub(crate) struct Parser {
 impl Parser {
 
     // program -> statement* EOF ;
-    pub fn parse<'a>(&self, tokens: &'a Vec<Token>) -> Result<Vec<Statement<'a>>, LoxError> {
+    pub fn parse<'a>(&self, tokens: &'a Vec<Token>) -> Result<Vec<Statement<'a>>, Vec<LoxError>> {
         let mut tokens = tokens.iter().peekable();
         let mut statements: Vec<Statement> = Vec::new();
+        let mut errors: Vec<LoxError> = Vec::new();
+        
         loop {
-            match &tokens.peek().unwrap().token_type {
-                TokenType::EOF => {
-                    break
+            match tokens.peek() {
+                Some(token) => {
+                    match token.token_type {
+                        TokenType::EOF => {
+                            break
+                        },
+                        _ => {
+                            let result = self.declaration(&mut tokens);
+                            match result {
+                                Ok(s) => {
+                                    statements.push(s)
+                                },
+                                Err(e) => {
+                                    errors.push(e);
+                                    self.synchronize(&mut tokens);
+                                }
+                            }
+                        }
+                    }
+                }
+                None => {
+                    break;
+                }
+            }
+            
+        }
+
+        if errors.len() > 0 {
+            Err(errors)
+        } else {
+            Ok(statements)
+        }
+    }
+
+    fn synchronize<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) {
+        let mut next = tokens.next();
+
+        loop {
+            match next {
+                Some(token) => {
+                    // if we just consumed a semicolon,
+                    // we're synchronized and ready to parse the next statement
+                    match token.token_type {
+                        TokenType::Semicolon => break,
+                        _ => {}
+                    };
+        
+                    match tokens.peek() {
+                        // if the next token in the list is one of the below
+                        // we are ready to start parsing the next statement,
+                        // since these token types all are used to start statements
+                        Some(peeked) => {
+                            match peeked.token_type {
+                                TokenType::Class => break,
+                                TokenType::Fun => break,
+                                TokenType::Var => break,
+                                TokenType::For => break,
+                                TokenType::If => break,
+                                TokenType::While => break,
+                                TokenType::Print => break,
+                                TokenType::Return => break,
+                                _ => {}
+                            }
+                        },
+                        None => break
+                    };
+        
+                    next = tokens.next();
                 },
-                _ => {
-                    statements.push(self.declaration(&mut tokens)?)
+                None => {
+                    break;
                 }
             }
         }
-        Ok(statements)
     }
 
     // declaration -> varDecl | statement ;
@@ -35,7 +101,6 @@ impl Parser {
             },
             _ => self.statement(tokens)
         }
-        // TODO synchronize on syntax errors here
     }
 
     fn var_declaration<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
