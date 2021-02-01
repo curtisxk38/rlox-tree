@@ -10,12 +10,17 @@ pub(crate) struct TreeWalker {
 
 #[derive(Debug)]
 struct Environment {
-    values: HashMap<String, Value>
+    values: HashMap<String, Value>,
+    enclosing: Option<Box<Environment>>
 }
 
 impl Environment {
     fn new() -> Environment {
-        Environment { values: HashMap::new() }
+        Environment { values: HashMap::new(), enclosing: None }
+    }
+
+    fn new_with_enclosing(env: Environment) -> Environment {
+        Environment { values: HashMap::new(), enclosing: Some(Box::new(env))}
     }
 
     fn define<'b>(&mut self, name: &'b str, value: Value) {
@@ -34,7 +39,13 @@ impl Environment {
         let result = self.values.get(name);
         match result {
             Some(v) => Ok(v.clone()),
-            None => Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
+            None => {
+                if let Some(enclosing) = &self.enclosing {
+                    enclosing.get(name)
+                } else{
+                    Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
+                }
+            }
         }
     }
 
@@ -42,8 +53,10 @@ impl Environment {
         if self.values.contains_key(name) {
             self.values.insert(name.to_string(), value.clone());
             Ok(value)
+        } else if let Some(enclosing) = &self.enclosing {
+            enclosing.get(name)
         } else {
-            Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined" })
+            Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
         }
         
     }
