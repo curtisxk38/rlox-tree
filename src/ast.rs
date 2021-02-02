@@ -72,6 +72,7 @@ pub(crate) enum Statement<'a> {
     ExpressionStatement(ExpressionStatement<'a>),
     PrintStatement(PrintStatement<'a>),
     VarDeclStatement(VarDeclStatement<'a>),
+    BlockStatement(BlockStatement<'a>),
 }
 
 pub(crate) struct ExpressionStatement<'a> {
@@ -86,4 +87,8 @@ pub(crate) struct PrintStatement<'a> {
 pub(crate) struct VarDeclStatement<'a> {
     pub token: &'a Token<'a>,
     pub initializer: Option<Expr<'a>>
+}
+
+pub(crate) struct BlockStatement<'a> {
+    pub statements: Vec<Statement<'a>>
 }

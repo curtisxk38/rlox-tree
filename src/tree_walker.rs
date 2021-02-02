@@ -1,26 +1,21 @@
-use std::{collections::HashMap, fmt::{Display}};
+use std::{collections::HashMap, fmt::{Display}, vec};
 
-use crate::{ast::{Assignent, Binary, BinaryOperator, Expr, ExpressionStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
+use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Expr, ExpressionStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
 
 
 #[derive(Debug)]
 pub(crate) struct TreeWalker {
-    environment: Environment
+    environments: Vec<Environment>,
 }
 
 #[derive(Debug)]
 struct Environment {
     values: HashMap<String, Value>,
-    enclosing: Option<Box<Environment>>
 }
 
 impl Environment {
     fn new() -> Environment {
-        Environment { values: HashMap::new(), enclosing: None }
-    }
-
-    fn new_with_enclosing(env: Environment) -> Environment {
-        Environment { values: HashMap::new(), enclosing: Some(Box::new(env))}
+        Environment { values: HashMap::new() }
     }
 
     fn define<'b>(&mut self, name: &'b str, value: Value) {
@@ -39,26 +34,17 @@ impl Environment {
         let result = self.values.get(name);
         match result {
             Some(v) => Ok(v.clone()),
-            None => {
-                if let Some(enclosing) = &self.enclosing {
-                    enclosing.get(name)
-                } else{
-                    Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
-                }
-            }
+            None => Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
         }
     }
 
-    fn assign<'b>(&mut self, name: &'b str, value: Value) -> Result<Value, LoxError> {
+    fn assign<'b>(&mut self, name: &'b str, value: &Value) -> Result<(), LoxError> {
         if self.values.contains_key(name) {
             self.values.insert(name.to_string(), value.clone());
-            Ok(value)
-        } else if let Some(enclosing) = &self.enclosing {
-            enclosing.get(name)
+            Ok(())
         } else {
             Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
-        }
-        
+        } 
     }
 }
 
@@ -83,7 +69,8 @@ impl Display for Value {
 
 impl TreeWalker {
     pub fn new() -> TreeWalker {
-        TreeWalker { environment: Environment::new() }
+        let environments =vec![Environment::new()];
+        TreeWalker { environments: environments }
     }
     
     pub fn visit_statement<'b>(&mut self, stmt: &'b Statement) -> Result<(), LoxError> {
@@ -96,6 +83,9 @@ impl TreeWalker {
             }
             Statement::VarDeclStatement(v) => {
                 self.visit_var_decl_statement(v)
+            }
+            Statement::BlockStatement(s) => {
+                self.visit_block_statement(s)
             }
         }
     }
@@ -118,8 +108,13 @@ impl TreeWalker {
             Some(e) => self.visit_expr(e)?,
             None => Value::NilValue
         };
-        self.environment.define(stmt.token.lexeme, initial_value);
+        self.define(stmt.token.lexeme, initial_value);
         Ok(())
+    }
+
+    fn visit_block_statement<'b>(&mut self, stmt: &'b BlockStatement) -> Result<(), LoxError> {
+        let env = Environment::new();
+        self.execute_block(&stmt.statements, env)
     }
 
     fn visit_expr(&mut self, expr: &Expr) -> Result<Value, LoxError> {
@@ -250,12 +245,52 @@ impl TreeWalker {
     }
 
     fn visit_variable(&self, expr: &Variable) -> Result<Value, LoxError> {
-        self.environment.get(expr.token.lexeme)
+        self.get(expr.token.lexeme)
     }
 
     fn visit_assignment(&mut self, expr: &Assignent) -> Result<Value, LoxError> {
         let value = self.visit_expr(expr.value.as_ref())?;
-        self.environment.assign(expr.token.lexeme, value)
+        self.assign(expr.token.lexeme, value)
+    }
+
+    fn execute_block(&mut self, statements: &Vec<Statement>, env: Environment) -> Result<(), LoxError> {
+        self.environments.push(env);
+        for statement in statements {
+            let result = self.visit_statement(statement);
+            if let Err(e) = result {
+                // clean up on error
+                self.environments.pop();
+                return Err(e)
+            }
+        }
+        self.environments.pop();
+        Ok(())
+    }
+
+    fn define<'b>(&mut self, name: &'b str, value: Value) {
+        // by unwrapping, we assume that environments always has at least 1 env
+        self.environments.last_mut().unwrap().define(name, value)
+    }
+
+    fn get<'b>(&self, name: &'b str) -> Result<Value, LoxError> {
+        for env in self.environments.iter().rev() {
+            match env.get(name) {
+                Ok(v) => return Ok(v),
+                Err(_) => {}
+            }
+        }
+        Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
+    }
+
+    fn assign<'b>(&mut self, name: &'b str, value: Value) -> Result<Value, LoxError> {
+        for env in self.environments.iter_mut().rev() {
+            match env.assign(name, &value) {
+                Ok(_) => return Ok(value),
+                Err(_) => {}
+            }
+        }
+
+        Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
     }
 
     fn is_equal(&self, left: &Value, right: &Value) -> bool {

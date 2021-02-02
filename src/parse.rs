@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Assignent, Binary, Expr, ExpressionStatement, Grouping, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
+use crate::{ast::{Assignent, Binary, BlockStatement, Expr, ExpressionStatement, Grouping, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -136,12 +136,16 @@ impl Parser {
     }
 
     // statement -> exprStatement
-    // | printStatement ;
+    // | printStatement 
+    // | blockStatement ;
     fn statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::Print => {
                 self.print_statement(tokens)
             },
+            TokenType::LeftBrace => {
+                self.block_statement(tokens)
+            }
             _ => {
                 // if the next token doesn't like any other statement, assume its an expr statement
                 self.expression_statement(tokens)
@@ -162,6 +166,27 @@ impl Parser {
             }
         };
         Ok(Statement::PrintStatement(PrintStatement {token, value}))
+    }
+
+    // blockStatement -> "{" declaration* "}" ;
+    fn block_statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+        tokens.next(); // consume "{"
+        let mut statements = Vec::new();
+        loop {
+            match tokens.peek().unwrap().token_type {
+                TokenType::RightBrace => {
+                    tokens.next(); // consume "}"
+                    break;
+                },
+                TokenType::EOF => {
+                    return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "reached EOF while parsing, expected '}'"})
+                }
+                _ => {
+                    statements.push(self.declaration(tokens)?);
+                }
+            }
+        };
+        Ok(Statement::BlockStatement(BlockStatement {statements}))
     }
 
     // exprStatement -> expression ";" ;
