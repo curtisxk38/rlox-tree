@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Assignent, Binary, BlockStatement, Expr, ExpressionStatement, Grouping, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
+use crate::{ast::{Assignent, Binary, BlockStatement, Expr, ExpressionStatement, Grouping, IfStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -137,7 +137,8 @@ impl Parser {
 
     // statement -> exprStatement
     // | printStatement 
-    // | blockStatement ;
+    // | blockStatement 
+    // | ifStatement;
     fn statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::Print => {
@@ -145,6 +146,9 @@ impl Parser {
             },
             TokenType::LeftBrace => {
                 self.block_statement(tokens)
+            },
+            TokenType::If => {
+                self.if_statement(tokens)
             }
             _ => {
                 // if the next token doesn't like any other statement, assume its an expr statement
@@ -187,6 +191,45 @@ impl Parser {
             }
         };
         Ok(Statement::BlockStatement(BlockStatement {statements}))
+    }
+
+    // ifStatement -> "if" "(" expression ")" statement ("else" statement)? ;
+    fn if_statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+        tokens.next(); // consume "if"
+        
+        match tokens.peek().unwrap().token_type {
+            TokenType::LeftParen => {
+                tokens.next(); // consume "("
+            },
+            _ => {
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected '(' after if"})
+            }
+        };
+
+        let condition = self.expression(tokens)?;
+        
+        match tokens.peek().unwrap().token_type {
+            TokenType::RightParen => {
+                tokens.next(); // consume ")"
+            },
+            _ => {
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ')' after if condition"})
+            }
+        };
+
+        let then_branch = Box::new(self.statement(tokens)?);
+
+        let else_branch = match tokens.peek().unwrap().token_type {
+            TokenType::Else => {
+                tokens.next(); // consume "else"
+                Some(Box::new(self.statement(tokens)?))
+            },
+            _ => {
+                None
+            }
+        };
+
+        Ok(Statement::IfStatement(IfStatement {condition, then_branch, else_branch}))
     }
 
     // exprStatement -> expression ";" ;

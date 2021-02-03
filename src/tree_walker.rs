@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::{Display}, vec};
 
-use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Expr, ExpressionStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
+use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Expr, ExpressionStatement, IfStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
 
 
 #[derive(Debug)]
@@ -87,6 +87,9 @@ impl TreeWalker {
             Statement::BlockStatement(s) => {
                 self.visit_block_statement(s)
             }
+            Statement::IfStatement(i) => {
+                self.visit_if_statement(i)
+            }
         }
     }
 
@@ -115,6 +118,17 @@ impl TreeWalker {
     fn visit_block_statement<'b>(&mut self, stmt: &'b BlockStatement) -> Result<(), LoxError> {
         let env = Environment::new();
         self.execute_block(&stmt.statements, env)
+    }
+
+    fn visit_if_statement<'b>(&mut self, stmt: &'b IfStatement) -> Result<(), LoxError> {
+        let condition = self.visit_expr(&stmt.condition)?;
+        if self.is_truthy(&condition) {
+            self.visit_statement(stmt.then_branch.as_ref())
+        } else if let Some(else_branch) = &stmt.else_branch{
+            self.visit_statement(else_branch.as_ref())
+        } else {
+            Ok(())
+        }
     }
 
     fn visit_expr(&mut self, expr: &Expr) -> Result<Value, LoxError> {

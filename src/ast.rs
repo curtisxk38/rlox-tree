@@ -73,6 +73,7 @@ pub(crate) enum Statement<'a> {
     PrintStatement(PrintStatement<'a>),
     VarDeclStatement(VarDeclStatement<'a>),
     BlockStatement(BlockStatement<'a>),
+    IfStatement(IfStatement<'a>),
 }
 
 pub(crate) struct ExpressionStatement<'a> {
@@ -91,4 +92,10 @@ pub(crate) struct VarDeclStatement<'a> {
 
 pub(crate) struct BlockStatement<'a> {
     pub statements: Vec<Statement<'a>>
+}
+
+pub(crate) struct IfStatement<'a> {
+    pub condition: Expr<'a>,
+    pub then_branch: Box<Statement<'a>>,
+    pub else_branch: Option<Box<Statement<'a>>>
 }
