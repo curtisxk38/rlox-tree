@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Assignent, Binary, BlockStatement, Expr, ExpressionStatement, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
+use crate::{ast::{Assignent, Binary, BlockStatement, Expr, ExpressionStatement, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -139,7 +139,8 @@ impl Parser {
     // | printStatement 
     // | blockStatement 
     // | ifStatement
-    // | whileStatement ;
+    // | whileStatement 
+    // | forStatement ;
     fn statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::Print => {
@@ -153,6 +154,9 @@ impl Parser {
             },
             TokenType::While => {
                 self.while_statement(tokens)
+            },
+            TokenType::For => {
+                self.for_statement(tokens)
             }
             _ => {
                 // if the next token doesn't like any other statement, assume its an expr statement
@@ -262,6 +266,125 @@ impl Parser {
 
         let body = Box::new(self.statement(tokens)?);
         Ok(Statement::WhileStatement(WhileStatement {condition, body}))
+    }
+
+    // forStatement -> "for" "(" (varDecl | exprStatement | ";") expression? ";" expression? ")" statement ; 
+    fn for_statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+        tokens.next(); // consume "for"
+
+        match tokens.peek().unwrap().token_type {
+            TokenType::LeftParen => {
+                tokens.next(); // consume "("
+            },
+            _ => {
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected '(' after for"})
+            }
+        };
+        
+        let initializer;
+
+        match tokens.peek().unwrap().token_type {
+            TokenType::Semicolon => {
+                initializer = None;
+            }
+            TokenType::Var => {
+                initializer = Some(self.var_declaration(tokens)?);
+            },
+            _ => {
+                initializer = Some(self.expression_statement(tokens)?);
+            }
+        };
+
+        let condition;
+
+        match tokens.peek().unwrap().token_type {
+            TokenType::Semicolon => {
+                condition = Expr::Literal(Literal {
+                    value: LiteralValue::BooleanValue(true), 
+                    token: tokens.peek().unwrap() // yeah it gets the ";" token idk
+                });
+            }
+            _ => {
+                condition = self.expression(tokens)?;
+            }
+        };
+
+        match tokens.peek().unwrap().token_type {
+            TokenType::Semicolon => {
+                tokens.next(); // consume ";"
+            },
+            _ => {
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ';' after for condition"})
+            }
+        };
+
+        let increment;
+
+        match tokens.peek().unwrap().token_type {
+            TokenType::Semicolon => {
+                increment = None;
+            }
+            _ => {
+                increment = Some(self.expression(tokens)?);
+            }
+        };
+
+        match tokens.peek().unwrap().token_type {
+            TokenType::RightParen => {
+                tokens.next(); // consume ")"
+            },
+            _ => {
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ')' after for clause"})
+            }
+        };
+
+        let body = self.statement(tokens)?;
+
+        // finished parsing, time to desugar
+
+        let while_node = match increment {
+            Some(increment) => {
+                // if increment exists,
+                // then create:
+                /* 
+                    while (condition) {
+                        <body>
+                        <increment>
+                    }
+                */
+                let increment_statement = Statement::ExpressionStatement(ExpressionStatement {expression: increment});
+                let block = Statement::BlockStatement(BlockStatement {statements: vec![body, increment_statement]});
+                 Statement::WhileStatement(WhileStatement {condition, body: Box::new(block) }) 
+            },
+            None => {
+                // if increment is none,
+                // then create:
+                /* 
+                    while (condition)
+                        <body>
+                */
+                Statement::WhileStatement(WhileStatement {condition, body: Box::new(body)})
+            }
+        };
+
+        match initializer {
+            // if initializer exists
+            // then create
+            /*
+                {
+                    <initializer>
+                    <while_node>
+                }
+            */
+            Some(initializer) => {
+                Ok(Statement::BlockStatement(BlockStatement {statements: vec![initializer, while_node]}))
+            }
+            None => {
+            // if initializer doesn't exist
+            // just returned the previously created node
+                Ok(while_node)
+            }
+        }
     }
 
     // exprStatement -> expression ";" ;
