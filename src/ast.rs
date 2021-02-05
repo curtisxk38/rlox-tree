@@ -89,6 +89,7 @@ pub(crate) enum Statement<'a> {
     VarDeclStatement(VarDeclStatement<'a>),
     BlockStatement(BlockStatement<'a>),
     IfStatement(IfStatement<'a>),
+    WhileStatement(WhileStatement<'a>),
 }
 
 pub(crate) struct ExpressionStatement<'a> {
@@ -113,4 +114,9 @@ pub(crate) struct IfStatement<'a> {
     pub condition: Expr<'a>,
     pub then_branch: Box<Statement<'a>>,
     pub else_branch: Option<Box<Statement<'a>>>
+}
+
+pub(crate) struct WhileStatement<'a> {
+    pub condition: Expr<'a>,
+    pub body: Box<Statement<'a>>
 }

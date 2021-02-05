@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::{Display}, vec};
 
-use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Expr, ExpressionStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
+use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Expr, ExpressionStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
 
 
 #[derive(Debug)]
@@ -90,6 +90,9 @@ impl TreeWalker {
             Statement::IfStatement(i) => {
                 self.visit_if_statement(i)
             }
+            Statement::WhileStatement(w) => {
+                self.visit_while_statement(w)
+            }
         }
     }
 
@@ -129,6 +132,17 @@ impl TreeWalker {
         } else {
             Ok(())
         }
+    }
+
+    fn visit_while_statement<'b>(&mut self, stmt: &'b WhileStatement) -> Result<(), LoxError> {
+        loop {
+            let condition = self.visit_expr(&stmt.condition)?;
+            if !self.is_truthy(&condition) {
+                break;
+            }
+            self.visit_statement(stmt.body.as_ref())?;
+        }
+        Ok(())
     }
 
     fn visit_expr(&mut self, expr: &Expr) -> Result<Value, LoxError> {
