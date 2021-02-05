@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Assignent, Binary, BlockStatement, Expr, ExpressionStatement, Grouping, IfStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
+use crate::{ast::{Assignent, Binary, BlockStatement, Expr, ExpressionStatement, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::{Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -251,9 +251,9 @@ impl Parser {
         self.assignment(tokens)
     }
 
-    // assignment -> IDENTIFIER "=" assignment | equality ;
+    // assignment -> IDENTIFIER "=" assignment | logic_or ;
     fn assignment<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
-        let expr = self.equality(tokens)?;
+        let expr = self.or(tokens)?;
 
         match &tokens.peek().unwrap().token_type {
             TokenType::Equal => {
@@ -272,6 +272,44 @@ impl Parser {
                 Ok(expr)
             }
         }
+    }
+
+    // logic_or -> logic_and ( "or" logic_and )* ;
+    fn or<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+        let mut expr = self.and(tokens)?;
+        loop {
+            let operator;
+            let token;
+            match &tokens.peek().unwrap().token_type {
+                TokenType::Or => {
+                    token = tokens.next().unwrap();
+                    operator = LogicalOperator::Or;
+                },
+                _ => break
+            }
+            let right = self.and(tokens)?;
+            expr = Expr::Logical(Logical {token: token, operator: operator, left: Box::new(expr), right: Box::new(right)});
+        };
+        Ok(expr)
+    }
+
+    // logic_and -> equality ( "and" equality )* ;
+    fn and<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+        let mut expr = self.equality(tokens)?;
+        loop {
+            let operator;
+            let token;
+            match &tokens.peek().unwrap().token_type {
+                TokenType::And => {
+                    token = tokens.next().unwrap();
+                    operator = LogicalOperator::And;
+                },
+                _ => break
+            }
+            let right = self.equality(tokens)?;
+            expr = Expr::Logical(Logical {token: token, operator: operator, left: Box::new(expr), right: Box::new(right)});
+        };
+        Ok(expr)
     }
 
     // equality -> comparison ( ( "!=" | "==" ) comparison )* ;

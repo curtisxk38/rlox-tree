@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::{Display}, vec};
 
-use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Expr, ExpressionStatement, IfStatement, Literal, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
+use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Expr, ExpressionStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
 
 
 #[derive(Debug)]
@@ -151,6 +151,9 @@ impl TreeWalker {
             Expr::Assignent(e) => {
                 self.visit_assignment(e)
             }
+            Expr::Logical(l) => {
+                self.visit_logical(l)
+            }
         }
     }
 
@@ -265,6 +268,24 @@ impl TreeWalker {
     fn visit_assignment(&mut self, expr: &Assignent) -> Result<Value, LoxError> {
         let value = self.visit_expr(expr.value.as_ref())?;
         self.assign(expr.token.lexeme, value)
+    }
+
+    fn visit_logical(&mut self, expr: &Logical) -> Result<Value, LoxError> {
+        let left_value = self.visit_expr(expr.left.as_ref())?;
+        match expr.operator {
+            LogicalOperator::And => {
+                if !self.is_truthy(&left_value) {
+                    return Ok(left_value);
+                }
+            }
+            LogicalOperator::Or => {
+                if self.is_truthy(&left_value) {
+                    return Ok(left_value);
+                }
+            }
+        };
+        let right_value = self.visit_expr(expr.right.as_ref())?;
+        return Ok(Value::BooleanValue(self.is_truthy(&right_value)));
     }
 
     fn execute_block(&mut self, statements: &Vec<Statement>, env: Environment) -> Result<(), LoxError> {

@@ -16,6 +16,12 @@ pub(crate) enum BinaryOperator {
 }
 
 #[derive(Debug)]
+pub(crate) enum LogicalOperator {
+    And,
+    Or
+}
+
+#[derive(Debug)]
 pub(crate) enum UnaryOperator {
     Bang,
     Minus,
@@ -29,6 +35,7 @@ pub(crate) enum Expr<'a> {
     Grouping(Grouping<'a>),
     Variable(Variable<'a>),
     Assignent(Assignent<'a>),
+    Logical(Logical<'a>),
 }
 
 #[derive(Debug)]
@@ -66,6 +73,14 @@ pub(crate) struct Variable<'a> {
 pub(crate) struct Assignent<'a> {
     pub token: &'a Token<'a>,
     pub value: Box<Expr<'a>>
+}
+
+#[derive(Debug)]
+pub(crate) struct Logical<'a> {
+    pub token: &'a Token<'a>,
+    pub operator: LogicalOperator,
+    pub left: Box<Expr<'a>>,
+    pub right: Box<Expr<'a>>,
 }
 
 pub(crate) enum Statement<'a> {
