@@ -245,7 +245,7 @@ impl Parser {
                 tokens.next(); // consume "("
             },
             _ => {
-                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected '(' after if"})
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected '(' after while"})
             }
         };
 
@@ -256,7 +256,7 @@ impl Parser {
                 tokens.next(); // consume ")"
             },
             _ => {
-                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ')' after if condition"})
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ')' after while condition"})
             }
         };
 
