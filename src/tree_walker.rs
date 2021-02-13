@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::{Display}, vec};
 
-use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Expr, ExpressionStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
+use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
 
 
 #[derive(Debug)]
@@ -9,7 +9,7 @@ pub(crate) struct TreeWalker {
 }
 
 #[derive(Debug)]
-struct Environment {
+pub(crate) struct Environment {
     values: HashMap<String, Value>,
 }
 
@@ -53,7 +53,8 @@ pub(crate) enum Value {
     NumberValue(f64),
     StringValue(String),
     BooleanValue(bool),
-    NilValue
+    NilValue,
+    Callable(Callable),
 }
 
 impl Display for Value {
@@ -63,13 +64,19 @@ impl Display for Value {
             Value::StringValue(n) => write!(f, "{}", n),
             Value::BooleanValue(n) => write!(f, "{}", n),
             Value::NilValue => write!(f, "nil"),
+            Value::Callable(_) => write!(f, "callable"),
         }
     }
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct Callable {
+    arity: usize,
+}
+
 impl TreeWalker {
     pub fn new() -> TreeWalker {
-        let environments =vec![Environment::new()];
+        let environments = vec![Environment::new()];
         TreeWalker { environments: environments }
     }
     
@@ -92,6 +99,9 @@ impl TreeWalker {
             }
             Statement::WhileStatement(w) => {
                 self.visit_while_statement(w)
+            }
+            Statement::FunDeclStatement(f) => {
+                self.visit_fun_decl_statement(f)
             }
         }
     }
@@ -145,6 +155,10 @@ impl TreeWalker {
         Ok(())
     }
 
+    fn visit_fun_decl_statement<'b>(&mut self, stmt: &'b FunDeclStatement) -> Result<(), LoxError> {
+        todo!()
+    }
+
     fn visit_expr(&mut self, expr: &Expr) -> Result<Value, LoxError> {
         match expr {
             Expr::Binary(e) => {
@@ -169,7 +183,7 @@ impl TreeWalker {
                 self.visit_logical(l)
             }
             Expr::Call(c) => {
-                todo!()
+                self.visit_call(c)
             }
         }
     }
@@ -305,6 +319,27 @@ impl TreeWalker {
         return Ok(Value::BooleanValue(self.is_truthy(&right_value)));
     }
 
+    fn visit_call(&mut self, expr: &Call) -> Result<Value, LoxError> {
+        let callee = self.visit_expr(expr.callee.as_ref())?;
+        let mut args = Vec::new();
+        // argument expressions evaluated from left to right
+        for arg in &expr.arguments {
+            args.push(self.visit_expr(&arg)?)
+        }
+        match callee {
+            Value::Callable(callee) => {
+                if args.len() != callee.arity {
+                    Err(LoxError {kind: LoxErrorKind::TypeError, message: "Got wrong number of arguments"})
+                } else {
+                    todo!()
+                }
+            },
+            _ => {
+                Err(LoxError {kind: LoxErrorKind::TypeError, message: "expression is not callable"})
+            }
+        }
+    }
+
     fn execute_block(&mut self, statements: &Vec<Statement>, env: Environment) -> Result<(), LoxError> {
         self.environments.push(env);
         for statement in statements {
@@ -370,6 +405,7 @@ impl TreeWalker {
             Value::NilValue => false,
             Value::NumberValue(_) => true,
             Value::StringValue(_) => true,
+            Value::Callable(_) => true,
         }
     }
 }

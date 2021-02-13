@@ -1,21 +1,29 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Assignent, Binary, BlockStatement, Call, Expr, ExpressionStatement, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
+use crate::{ast::{Assignent, Binary, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
+
 pub(crate) struct Parser {
-    errors: Vec<LoxError>
+    pub errors: Vec<LoxError>,
+    MAX_PARAMETERS: usize
+}
+
+enum FunctionKind {
+    Function,
+    Method,
 }
 
 impl Parser {
+    
 
     pub fn new() -> Parser {
-        Parser { errors: Vec::new() }
+        Parser { errors: Vec::new(), MAX_PARAMETERS: 255 }
     }
 
     // program -> statement* EOF ;
-    pub fn parse<'a>(&mut self, tokens: &'a Vec<Token>) -> Result<Vec<Statement<'a>>, Vec<LoxError>> {
+    pub fn parse<'a>(&mut self, tokens: &'a Vec<Token>) -> Result<Vec<Statement<'a>>, ()> {
         let mut tokens = tokens.iter().peekable();
         let mut statements: Vec<Statement> = Vec::new();
         
@@ -48,7 +56,7 @@ impl Parser {
         }
 
         if self.errors.len() > 0 {
-            Err(self.errors)
+            Err(())
         } else {
             Ok(statements)
         }
@@ -96,13 +104,110 @@ impl Parser {
         }
     }
 
-    // declaration -> varDecl | statement ;
+    // declaration -> funDecl | varDecl | statement ;
     fn declaration<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::Var => {
                 self.var_declaration(tokens)
             },
+            TokenType::Fun => {
+                self.fun_declaration(tokens)
+            }
             _ => self.statement(tokens)
+        }
+    }
+
+    // funDecl -> "fun" function ;
+    fn fun_declaration<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+        tokens.next(); // consume 'fun'
+        self.function(tokens, FunctionKind::Function)?;
+        todo!()
+    }
+
+    // function -> IDENTIFIER "(" parameters? ")" blockStatement ;
+    fn function<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>, kind: FunctionKind) -> Result<Statement<'a>, LoxError> {
+        let name;
+        match &tokens.peek().unwrap().token_type {
+            TokenType::Identifier => name = tokens.next().unwrap(),
+            _ => {
+                let message = match kind {
+                    FunctionKind::Function => { "expected function name"}
+                    FunctionKind::Method => { "expected method name" }
+                };
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message});
+            }
+        };
+
+        match &tokens.peek().unwrap().token_type {
+            TokenType::LeftParen => {
+                tokens.next(); // consume "("
+                let mut parameters = Vec::new();
+                match &tokens.peek().unwrap().token_type {
+                    TokenType::RightParen => {
+                        // no parameters
+                    },
+                    _ => {
+                        loop {
+                            if parameters.len() > self.MAX_PARAMETERS {
+                                // no need to return the Error
+                                // that would mean the parser is in a bad state and needs to synchronize
+                                // but we don't need to do that for this type of error
+                                self.errors.push(LoxError {kind: LoxErrorKind::SyntaxError, message: "can't have > 255 arguments to a function call"})
+                            }
+                            match &tokens.peek().unwrap().token_type {
+                                TokenType::Identifier => {
+                                    parameters.push(tokens.next().unwrap());
+                                },
+                                _ => {
+                                    return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected identifier"});
+                                }
+                            }
+
+                            match &tokens.peek().unwrap().token_type {
+                                TokenType::Comma => {
+                                    tokens.next(); // consume ','
+                                },
+                                _ => {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                match &tokens.peek().unwrap().token_type {
+                    TokenType::RightParen => {
+                        tokens.next(); // consume ")"
+                    },
+                    _ => {
+                        return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ')' after parameters"})
+                    }
+                }
+
+                let body;
+                match &tokens.peek().unwrap().token_type {
+                    TokenType::LeftBrace => {
+                        body = self.block_statement(tokens)?;
+                    },
+                    _ => {
+                        let message = match kind {
+                            FunctionKind::Function => { "expected '{' afer function body"}
+                            FunctionKind::Method => { "expected '{' after method body" }
+                        };
+                        return Err(LoxError {kind: LoxErrorKind::SyntaxError, message})
+                    }
+                };
+
+
+                Ok(Statement::FunDeclStatement(FunDeclStatement {name, body, parameters}))
+            },
+            _ => {
+                let message = match kind {
+                    FunctionKind::Function => { "expected '(' afer function name"}
+                    FunctionKind::Method => { "expected '(' after method name" }
+                };
+                Err(LoxError {kind: LoxErrorKind::SyntaxError, message})
+            }
         }
     }
 
@@ -150,7 +255,7 @@ impl Parser {
                 self.print_statement(tokens)
             },
             TokenType::LeftBrace => {
-                self.block_statement(tokens)
+                Ok(Statement::BlockStatement(self.block_statement(tokens)?))
             },
             TokenType::If => {
                 self.if_statement(tokens)
@@ -184,7 +289,7 @@ impl Parser {
     }
 
     // blockStatement -> "{" declaration* "}" ;
-    fn block_statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn block_statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<BlockStatement<'a>, LoxError> {
         tokens.next(); // consume "{"
         let mut statements = Vec::new();
         loop {
@@ -201,8 +306,9 @@ impl Parser {
                 }
             }
         };
-        Ok(Statement::BlockStatement(BlockStatement {statements}))
+        Ok(BlockStatement {statements})
     }
+    
 
     // ifStatement -> "if" "(" expression ")" statement ("else" statement)? ;
     fn if_statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
@@ -494,7 +600,7 @@ impl Parser {
     }
 
     // comparison -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-    fn comparison<'a>(& self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn comparison<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
         let mut expr = self.term(tokens)?;
         loop {
             let operator;
@@ -627,7 +733,10 @@ impl Parser {
     fn arguments<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Vec<Expr<'a>>, LoxError> {
         let mut args: Vec<Expr> = Vec::new();
         loop {
-            if args.len() > 255 {
+            if args.len() > self.MAX_PARAMETERS {
+                // no need to return the Error
+                // that would mean the parser is in a bad state and needs to synchronize
+                // but we don't need to do that for this type of error
                 self.errors.push(LoxError {kind: LoxErrorKind::SyntaxError, message: "can't have > 255 arguments to a function call"})
             }
             args.push(self.expression(tokens)?);

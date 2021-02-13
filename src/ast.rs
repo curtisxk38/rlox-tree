@@ -98,6 +98,7 @@ pub(crate) enum Statement<'a> {
     BlockStatement(BlockStatement<'a>),
     IfStatement(IfStatement<'a>),
     WhileStatement(WhileStatement<'a>),
+    FunDeclStatement(FunDeclStatement<'a>),
 }
 
 pub(crate) struct ExpressionStatement<'a> {
@@ -127,4 +128,10 @@ pub(crate) struct IfStatement<'a> {
 pub(crate) struct WhileStatement<'a> {
     pub condition: Expr<'a>,
     pub body: Box<Statement<'a>>
+}
+
+pub(crate) struct FunDeclStatement<'a> {
+    pub name: &'a Token<'a>,
+    pub parameters: Vec<&'a Token<'a>>,
+    pub body: BlockStatement<'a>
 }

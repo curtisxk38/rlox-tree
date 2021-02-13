@@ -13,6 +13,7 @@ mod parse;
 mod error;
 mod ast;
 mod tree_walker;
+mod callable;
 
 struct Interpreter {
     had_error: bool,
@@ -61,7 +62,7 @@ impl  Interpreter {
         let mut scanner = scan::Scanner::new(&input);
         match scanner.scan() {
             Ok(_) => {
-                let parser = parse::Parser::new();
+                let mut parser = parse::Parser::new();
                 let parsed = parser.parse(&scanner.tokens);
                 match parsed {
                     Ok(statements) => {
@@ -77,8 +78,8 @@ impl  Interpreter {
                         }
                         
                     },
-                    Err(errors) => {
-                        for error in errors {
+                    Err(_) => {
+                        for error in parser.errors {
                             self.error(error);
                         }
                     }
