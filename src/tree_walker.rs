@@ -168,6 +168,9 @@ impl TreeWalker {
             Expr::Logical(l) => {
                 self.visit_logical(l)
             }
+            Expr::Call(c) => {
+                todo!()
+            }
         }
     }
 

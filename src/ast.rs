@@ -36,6 +36,7 @@ pub(crate) enum Expr<'a> {
     Variable(Variable<'a>),
     Assignent(Assignent<'a>),
     Logical(Logical<'a>),
+    Call(Call<'a>),
 }
 
 #[derive(Debug)]
@@ -81,6 +82,13 @@ pub(crate) struct Logical<'a> {
     pub operator: LogicalOperator,
     pub left: Box<Expr<'a>>,
     pub right: Box<Expr<'a>>,
+}
+
+#[derive(Debug)]
+pub(crate) struct Call<'a> {
+    pub callee: Box<Expr<'a>>,
+    pub arguments: Vec<Expr<'a>>,
+    pub token: &'a Token<'a>, // token for closing ")" after call
 }
 
 pub(crate) enum Statement<'a> {

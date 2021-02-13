@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Assignent, Binary, BlockStatement, Expr, ExpressionStatement, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
+use crate::{ast::{Assignent, Binary, BlockStatement, Call, Expr, ExpressionStatement, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -567,8 +567,7 @@ impl Parser {
         Ok(expr)
     }
 
-    // unary -> ( "!" | "-" ) unary
-    //       | primary ;
+    // unary -> ( "!" | "-" ) unary | call ;
     fn unary<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::Bang => {
@@ -584,9 +583,58 @@ impl Parser {
                 Ok(Expr::Unary(Unary {operator: operator, token: token, right: Box::new(right)}))
             }
             _ => {
-                self.primary(tokens)
+                self.call(tokens)
             }
         }
+    }
+    
+    // call -> primary ( "(" arguments? ")" )* ;
+    fn call<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+        let p = self.primary(tokens)?;
+        let mut args = Vec::new();
+        let token;
+        match &tokens.peek().unwrap().token_type {
+            TokenType::LeftParen => {
+                tokens.next(); // consume "("
+                match &tokens.peek().unwrap().token_type {
+                    TokenType::RightParen => {
+                        token = tokens.next().unwrap(); // consume ")"
+                    },
+                    _ => {
+                        args = self.arguments(tokens)?;
+                        match &tokens.peek().unwrap().token_type {
+                            TokenType::RightParen => {
+                                token = tokens.next().unwrap(); // consume ")"
+                            },
+                            _ => {
+                                return Err(LoxError {kind: LoxErrorKind::ScannerError, message: "expected ')' call"})
+                            }
+                        }
+                    }
+                }
+            },
+            _ => {
+                return Ok(p);
+            }
+        };
+        Ok(Expr::Call(Call {callee: Box::new(p), arguments: args, token}))
+    }
+
+    // arguments -> expression ( "," expression )* ;
+    fn arguments<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Vec<Expr<'a>>, LoxError> {
+        let mut args: Vec<Expr> = Vec::new();
+        loop {
+            args.push(self.expression(tokens)?);
+            match &tokens.peek().unwrap().token_type {
+                TokenType::Comma => {
+                    tokens.next(); // consume ","
+                },
+                _ => {
+                    break;
+                }
+            }
+        };
+        Ok(args)
     }
 
     // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
