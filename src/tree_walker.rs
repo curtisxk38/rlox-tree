@@ -1,21 +1,22 @@
-use std::{collections::HashMap, fmt::{Display}, vec};
+use std::{collections::HashMap, fmt::{Display}, rc::Rc, vec};
 
 use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
 
 
 #[derive(Debug)]
 pub(crate) struct TreeWalker {
-    environments: Vec<Environment>,
+    environment: Rc<Environment>,
 }
 
 #[derive(Debug)]
 pub(crate) struct Environment {
     values: HashMap<String, Value>,
+    parent: Option<Rc<Environment>>,
 }
 
 impl Environment {
     fn new() -> Environment {
-        Environment { values: HashMap::new() }
+        Environment { values: HashMap::new(), parent: None }
     }
 
     fn define<'b>(&mut self, name: &'b str, value: Value) {
@@ -34,7 +35,16 @@ impl Environment {
         let result = self.values.get(name);
         match result {
             Some(v) => Ok(v.clone()),
-            None => Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
+            None => {
+                match &self.parent {
+                    Some(parent) => {
+                        parent.get(name)
+                    }
+                    None => {
+                        Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
+                    }
+                }   
+            }
         }
     }
 
@@ -43,7 +53,15 @@ impl Environment {
             self.values.insert(name.to_string(), value.clone());
             Ok(())
         } else {
-            Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
+            match &mut self.parent {
+                Some(parent) => {
+                    println!("sc {}", Rc::strong_count(parent));
+                    Rc::get_mut(parent).unwrap().assign(name, value)
+                },
+                None => {
+                    Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
+                }
+            }
         } 
     }
 }
@@ -76,8 +94,7 @@ pub(crate) struct Callable {
 
 impl TreeWalker {
     pub fn new() -> TreeWalker {
-        let environments = vec![Environment::new()];
-        TreeWalker { environments: environments }
+        TreeWalker { environment: Rc::new(Environment::new()) }
     }
     
     pub fn visit_statement<'b>(&mut self, stmt: &'b Statement) -> Result<(), LoxError> {
@@ -340,44 +357,49 @@ impl TreeWalker {
         }
     }
 
-    fn execute_block(&mut self, statements: &Vec<Statement>, env: Environment) -> Result<(), LoxError> {
-        self.environments.push(env);
+    fn execute_block(&mut self, statements: &Vec<Statement>, mut env: Environment) -> Result<(), LoxError> {
+        env.parent = Some(Rc::clone(&self.environment));
+        self.environment = Rc::new(env);
         for statement in statements {
             let result = self.visit_statement(statement);
             if let Err(e) = result {
                 // clean up on error
-                self.environments.pop();
+                self.clean_up_env();
                 return Err(e)
             }
         }
-        self.environments.pop();
+        self.clean_up_env();
         Ok(())
     }
 
+    fn clean_up_env(&mut self) {
+        match &self.environment.parent {
+            Some(x) => {
+                self.environment = Rc::clone(&x)
+            }
+            None => {} // unreachable
+        };
+    }
+
     fn define<'b>(&mut self, name: &'b str, value: Value) {
-        // by unwrapping, we assume that environments always has at least 1 env
-        self.environments.last_mut().unwrap().define(name, value)
+        // TODO is unwrapping here okay?
+        // I think it is because the environments are basically like a linked list
+        // and we are only using the tail at any given point in time
+        Rc::get_mut(&mut self.environment).unwrap().define(name, value)
     }
 
     fn get<'b>(&self, name: &'b str) -> Result<Value, LoxError> {
-        for env in self.environments.iter().rev() {
-            match env.get(name) {
-                Ok(v) => return Ok(v),
-                Err(_) => {}
-            }
-        }
-        Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
+        self.environment.get(name)
     }
 
     fn assign<'b>(&mut self, name: &'b str, value: Value) -> Result<Value, LoxError> {
-        for env in self.environments.iter_mut().rev() {
-            match env.assign(name, &value) {
-                Ok(_) => return Ok(value),
-                Err(_) => {}
-            }
+        // TODO is unwrapping here okay?
+        // I think it is because the environments are basically like a linked list
+        // and we are only using the tail at any given point in time
+        match Rc::get_mut(&mut self.environment).unwrap().assign(name, &value) {
+            Ok(_) => Ok(value),
+            Err(e) => Err(e)
         }
-
-        Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
     }
 
     fn is_equal(&self, left: &Value, right: &Value) -> bool {
