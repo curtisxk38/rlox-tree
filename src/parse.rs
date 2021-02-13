@@ -5,16 +5,19 @@ use crate::ast::{BinaryOperator};
 
 
 pub(crate) struct Parser {
-
+    errors: Vec<LoxError>
 }
 
 impl Parser {
 
+    pub fn new() -> Parser {
+        Parser { errors: Vec::new() }
+    }
+
     // program -> statement* EOF ;
-    pub fn parse<'a>(&self, tokens: &'a Vec<Token>) -> Result<Vec<Statement<'a>>, Vec<LoxError>> {
+    pub fn parse<'a>(&mut self, tokens: &'a Vec<Token>) -> Result<Vec<Statement<'a>>, Vec<LoxError>> {
         let mut tokens = tokens.iter().peekable();
         let mut statements: Vec<Statement> = Vec::new();
-        let mut errors: Vec<LoxError> = Vec::new();
         
         loop {
             match tokens.peek() {
@@ -30,7 +33,7 @@ impl Parser {
                                     statements.push(s)
                                 },
                                 Err(e) => {
-                                    errors.push(e);
+                                    self.errors.push(e);
                                     self.synchronize(&mut tokens);
                                 }
                             }
@@ -44,14 +47,14 @@ impl Parser {
             
         }
 
-        if errors.len() > 0 {
-            Err(errors)
+        if self.errors.len() > 0 {
+            Err(self.errors)
         } else {
             Ok(statements)
         }
     }
 
-    fn synchronize<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) {
+    fn synchronize<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) {
         let mut next = tokens.next();
 
         loop {
@@ -94,7 +97,7 @@ impl Parser {
     }
 
     // declaration -> varDecl | statement ;
-    fn declaration<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn declaration<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::Var => {
                 self.var_declaration(tokens)
@@ -103,7 +106,7 @@ impl Parser {
         }
     }
 
-    fn var_declaration<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn var_declaration<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
         tokens.next(); // consume 'var'
         let token;
         match &tokens.peek().unwrap().token_type {
@@ -141,7 +144,7 @@ impl Parser {
     // | ifStatement
     // | whileStatement 
     // | forStatement ;
-    fn statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::Print => {
                 self.print_statement(tokens)
@@ -166,7 +169,7 @@ impl Parser {
     }
 
     // printStatement -> "print" expression ";" ;
-    fn print_statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn print_statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
         let token = tokens.next().unwrap(); // "print" token
         let value = self.expression(tokens)?;
         match &tokens.peek().unwrap().token_type {
@@ -181,7 +184,7 @@ impl Parser {
     }
 
     // blockStatement -> "{" declaration* "}" ;
-    fn block_statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn block_statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
         tokens.next(); // consume "{"
         let mut statements = Vec::new();
         loop {
@@ -202,7 +205,7 @@ impl Parser {
     }
 
     // ifStatement -> "if" "(" expression ")" statement ("else" statement)? ;
-    fn if_statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn if_statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
         tokens.next(); // consume "if"
         
         match tokens.peek().unwrap().token_type {
@@ -241,7 +244,7 @@ impl Parser {
     }
 
     // whileStatement -> "while" "(" expression ")" statement ;
-    fn while_statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn while_statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
         tokens.next(); // consume "while"
         
         match tokens.peek().unwrap().token_type {
@@ -269,7 +272,7 @@ impl Parser {
     }
 
     // forStatement -> "for" "(" (varDecl | exprStatement | ";") expression? ";" expression? ")" statement ; 
-    fn for_statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn for_statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
         tokens.next(); // consume "for"
 
         match tokens.peek().unwrap().token_type {
@@ -388,7 +391,7 @@ impl Parser {
     }
 
     // exprStatement -> expression ";" ;
-    fn expression_statement<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn expression_statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
         let expr = self.expression(tokens)?;
         match &tokens.peek().unwrap().token_type {
             TokenType::Semicolon => {
@@ -402,12 +405,12 @@ impl Parser {
     }
 
     // expression -> assignment ;
-    fn expression<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn expression<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
         self.assignment(tokens)
     }
 
     // assignment -> IDENTIFIER "=" assignment | logic_or ;
-    fn assignment<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn assignment<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
         let expr = self.or(tokens)?;
 
         match &tokens.peek().unwrap().token_type {
@@ -430,7 +433,7 @@ impl Parser {
     }
 
     // logic_or -> logic_and ( "or" logic_and )* ;
-    fn or<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn or<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
         let mut expr = self.and(tokens)?;
         loop {
             let operator;
@@ -449,7 +452,7 @@ impl Parser {
     }
 
     // logic_and -> equality ( "and" equality )* ;
-    fn and<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn and<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
         let mut expr = self.equality(tokens)?;
         loop {
             let operator;
@@ -468,7 +471,7 @@ impl Parser {
     }
 
     // equality -> comparison ( ( "!=" | "==" ) comparison )* ;
-    fn equality<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn equality<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
         let mut expr = self.comparison(tokens)?;
         loop {
             let operator;
@@ -522,7 +525,7 @@ impl Parser {
     }
 
     // term -> factor ( ( "-" | "+") factor )* ;
-    fn term<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn term<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
         let mut expr = self.factor(tokens)?;
         loop {
             let operator;
@@ -545,7 +548,7 @@ impl Parser {
     }
 
     // factor -> unary ( ( "/" | "*") unary )* ;
-    fn factor<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError>{
+    fn factor<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError>{
         let mut expr = self.unary(tokens)?;
         loop {
             let operator;
@@ -568,7 +571,7 @@ impl Parser {
     }
 
     // unary -> ( "!" | "-" ) unary | call ;
-    fn unary<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn unary<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::Bang => {
                 let token = tokens.next().unwrap();
@@ -589,7 +592,7 @@ impl Parser {
     }
     
     // call -> primary ( "(" arguments? ")" )* ;
-    fn call<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn call<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
         let p = self.primary(tokens)?;
         let mut args = Vec::new();
         let token;
@@ -621,9 +624,12 @@ impl Parser {
     }
 
     // arguments -> expression ( "," expression )* ;
-    fn arguments<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Vec<Expr<'a>>, LoxError> {
+    fn arguments<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Vec<Expr<'a>>, LoxError> {
         let mut args: Vec<Expr> = Vec::new();
         loop {
+            if args.len() > 255 {
+                self.errors.push(LoxError {kind: LoxErrorKind::SyntaxError, message: "can't have > 255 arguments to a function call"})
+            }
             args.push(self.expression(tokens)?);
             match &tokens.peek().unwrap().token_type {
                 TokenType::Comma => {
@@ -638,7 +644,7 @@ impl Parser {
     }
 
     // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
-    fn primary<'a>(&self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn primary<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::False | TokenType::True | TokenType::Number | TokenType::String | TokenType::Nil => {
                 let token = tokens.next().unwrap();

@@ -61,7 +61,7 @@ impl  Interpreter {
         let mut scanner = scan::Scanner::new(&input);
         match scanner.scan() {
             Ok(_) => {
-                let parser = parse::Parser{};
+                let parser = parse::Parser::new();
                 let parsed = parser.parse(&scanner.tokens);
                 match parsed {
                     Ok(statements) => {
