@@ -167,7 +167,9 @@ impl TreeWalker {
     }
 
     fn visit_fun_decl_statement<'b>(&mut self, stmt: &'b FunDeclStatement) -> Result<(), LoxError> {
-        todo!()
+        let fun = Function { declaration: stmt.to_owned() };
+        self.define(&stmt.name.lexeme, Value::Callable(fun));
+        Ok(())
     }
 
     fn visit_expr(&mut self, expr: &Expr) -> Result<Value, LoxError> {

@@ -2,7 +2,7 @@ use crate::{ast::FunDeclStatement, error::LoxError, tree_walker::{Environment, T
 
 #[derive(Debug, Clone)]
 pub(crate) struct Function {
-    declaration: FunDeclStatement
+    pub declaration: FunDeclStatement
 }
 
 impl Function {

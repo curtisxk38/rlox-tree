@@ -120,8 +120,7 @@ impl Parser {
     // funDecl -> "fun" function ;
     fn fun_declaration(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
         tokens.next(); // consume 'fun'
-        self.function(tokens, FunctionKind::Function)?;
-        todo!()
+        self.function(tokens, FunctionKind::Function)
     }
 
     // function -> IDENTIFIER "(" parameters? ")" blockStatement ;
