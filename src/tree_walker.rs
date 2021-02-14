@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::{Display}, rc::Rc};
 
 use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
-
+use crate::callable::Function;
 
 #[derive(Debug)]
 pub(crate) struct TreeWalker {
@@ -15,11 +15,11 @@ pub(crate) struct Environment {
 }
 
 impl Environment {
-    fn new() -> Environment {
+    pub fn new() -> Environment {
         Environment { values: HashMap::new(), parent: None }
     }
 
-    fn define<'b>(&mut self, name: &'b str, value: Value) {
+    pub fn define<'b>(&mut self, name: &'b str, value: Value) {
         self.values.insert(name.to_string(), value);
         // this means you can redine values
         // valid program:
@@ -71,7 +71,7 @@ pub(crate) enum Value {
     StringValue(String),
     BooleanValue(bool),
     NilValue,
-    Callable(Callable),
+    Callable(Function),
 }
 
 impl Display for Value {
@@ -84,11 +84,6 @@ impl Display for Value {
             Value::Callable(_) => write!(f, "callable"),
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct Callable {
-    arity: usize,
 }
 
 impl TreeWalker {
@@ -344,10 +339,10 @@ impl TreeWalker {
         }
         match callee {
             Value::Callable(callee) => {
-                if args.len() != callee.arity {
+                if args.len() != callee.arity() {
                     Err(LoxError {kind: LoxErrorKind::TypeError, message: "Got wrong number of arguments"})
                 } else {
-                    todo!()
+                    callee.call(self, args)
                 }
             },
             _ => {
@@ -356,7 +351,7 @@ impl TreeWalker {
         }
     }
 
-    fn execute_block(&mut self, statements: &Vec<Statement>, mut env: Environment) -> Result<(), LoxError> {
+    pub fn execute_block(&mut self, statements: &Vec<Statement>, mut env: Environment) -> Result<(), LoxError> {
         env.parent = Some(Rc::clone(&self.environment));
         self.environment = Rc::new(env);
         for statement in statements {

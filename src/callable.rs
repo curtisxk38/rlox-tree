@@ -1,10 +1,24 @@
-use crate::{ast::FunDeclStatement, tree_walker::{Environment, TreeWalker}};
+use crate::{ast::FunDeclStatement, error::LoxError, tree_walker::{Environment, TreeWalker, Value}};
 
-
-trait Callable {
-    fn call(interpreter: TreeWalker, environment: Environment);
+#[derive(Debug, Clone)]
+pub(crate) struct Function {
+    declaration: FunDeclStatement
 }
 
-struct Function {
-    declaration: FunDeclStatement
+impl Function {
+    pub fn call(& self, interpreter:  &mut TreeWalker, arguments: Vec<Value>) -> Result<Value, LoxError>{
+        let mut env = Environment::new();
+        // ASSUMPTION made: arguments.len() = self.declaration.parameters.len()
+        for index  in 0..arguments.len() {
+            env.define(&self.declaration.parameters.get(index).unwrap().lexeme, arguments.get(index).unwrap().to_owned())
+        }
+
+        interpreter.execute_block(&self.declaration.body.statements, env)?;
+        // todo add return statement
+        Ok(Value::NilValue)
+    }
+
+    pub fn arity(&self) -> usize {
+        self.declaration.parameters.len()
+    }
 }
