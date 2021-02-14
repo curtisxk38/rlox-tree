@@ -28,110 +28,110 @@ pub(crate) enum UnaryOperator {
 }
 
 #[derive(Debug)]
-pub(crate) enum Expr<'a> {
-    Binary(Binary<'a>),
-    Unary(Unary<'a>),
-    Literal(Literal<'a>),
-    Grouping(Grouping<'a>),
-    Variable(Variable<'a>),
-    Assignent(Assignent<'a>),
-    Logical(Logical<'a>),
-    Call(Call<'a>),
+pub(crate) enum Expr {
+    Binary(Binary),
+    Unary(Unary),
+    Literal(Literal),
+    Grouping(Grouping),
+    Variable(Variable),
+    Assignent(Assignent),
+    Logical(Logical),
+    Call(Call),
 }
 
 #[derive(Debug)]
-pub(crate) struct Binary<'a> {
-    pub token: &'a Token<'a>,
+pub(crate) struct Binary {
+    pub token: Token,
     pub operator: BinaryOperator,
-    pub left: Box<Expr<'a>>,
-    pub right: Box<Expr<'a>>,
+    pub left: Box<Expr>,
+    pub right: Box<Expr>,
 }
 
 #[derive(Debug)]
-pub(crate) struct Unary<'a> {
-    pub token: &'a Token<'a>,
+pub(crate) struct Unary {
+    pub token: Token,
     pub operator: UnaryOperator,
-    pub right: Box<Expr<'a>>
+    pub right: Box<Expr>
 }
 
 #[derive(Debug)]
-pub(crate) struct Literal<'a> {
-    pub token: &'a Token<'a>,
+pub(crate) struct Literal {
+    pub token: Token,
     pub value: LiteralValue,
 }
 
 #[derive(Debug)]
-pub(crate) struct Grouping<'a> {
-    pub expr: Box<Expr<'a>>
+pub(crate) struct Grouping {
+    pub expr: Box<Expr>
 }
 
 #[derive(Debug)]
-pub(crate) struct Variable<'a> {
-    pub token: &'a Token<'a>
+pub(crate) struct Variable {
+    pub token: Token
 }
 
 #[derive(Debug)]
-pub(crate) struct Assignent<'a> {
-    pub token: &'a Token<'a>,
-    pub value: Box<Expr<'a>>
+pub(crate) struct Assignent {
+    pub token: Token,
+    pub value: Box<Expr>
 }
 
 #[derive(Debug)]
-pub(crate) struct Logical<'a> {
-    pub token: &'a Token<'a>,
+pub(crate) struct Logical {
+    pub token: Token,
     pub operator: LogicalOperator,
-    pub left: Box<Expr<'a>>,
-    pub right: Box<Expr<'a>>,
+    pub left: Box<Expr>,
+    pub right: Box<Expr>,
 }
 
 #[derive(Debug)]
-pub(crate) struct Call<'a> {
-    pub callee: Box<Expr<'a>>,
-    pub arguments: Vec<Expr<'a>>,
-    pub token: &'a Token<'a>, // token for closing ")" after call
+pub(crate) struct Call {
+    pub callee: Box<Expr>,
+    pub arguments: Vec<Expr>,
+    pub token: Token, // token for closing ")" after call
 }
 
-pub(crate) enum Statement<'a> {
-    ExpressionStatement(ExpressionStatement<'a>),
-    PrintStatement(PrintStatement<'a>),
-    VarDeclStatement(VarDeclStatement<'a>),
-    BlockStatement(BlockStatement<'a>),
-    IfStatement(IfStatement<'a>),
-    WhileStatement(WhileStatement<'a>),
-    FunDeclStatement(FunDeclStatement<'a>),
+pub(crate) enum Statement {
+    ExpressionStatement(ExpressionStatement),
+    PrintStatement(PrintStatement),
+    VarDeclStatement(VarDeclStatement),
+    BlockStatement(BlockStatement),
+    IfStatement(IfStatement),
+    WhileStatement(WhileStatement),
+    FunDeclStatement(FunDeclStatement),
 }
 
-pub(crate) struct ExpressionStatement<'a> {
-    pub expression: Expr<'a>
+pub(crate) struct ExpressionStatement {
+    pub expression: Expr
 }
 
-pub(crate) struct PrintStatement<'a> {
-    pub token: &'a Token<'a>,
-    pub value: Expr<'a>
+pub(crate) struct PrintStatement {
+    pub token: Token,
+    pub value: Expr
 }
 
-pub(crate) struct VarDeclStatement<'a> {
-    pub token: &'a Token<'a>,
-    pub initializer: Option<Expr<'a>>
+pub(crate) struct VarDeclStatement {
+    pub token: Token,
+    pub initializer: Option<Expr>
 }
 
-pub(crate) struct BlockStatement<'a> {
-    pub statements: Vec<Statement<'a>>
+pub(crate) struct BlockStatement {
+    pub statements: Vec<Statement>
 }
 
-pub(crate) struct IfStatement<'a> {
-    pub condition: Expr<'a>,
-    pub then_branch: Box<Statement<'a>>,
-    pub else_branch: Option<Box<Statement<'a>>>
+pub(crate) struct IfStatement {
+    pub condition: Expr,
+    pub then_branch: Box<Statement>,
+    pub else_branch: Option<Box<Statement>>
 }
 
-pub(crate) struct WhileStatement<'a> {
-    pub condition: Expr<'a>,
-    pub body: Box<Statement<'a>>
+pub(crate) struct WhileStatement {
+    pub condition: Expr,
+    pub body: Box<Statement>
 }
 
-pub(crate) struct FunDeclStatement<'a> {
-    pub name: &'a Token<'a>,
-    pub parameters: Vec<&'a Token<'a>>,
-    pub body: BlockStatement<'a>
+pub(crate) struct FunDeclStatement {
+    pub name: Token,
+    pub parameters: Vec<Token>,
+    pub body: BlockStatement
 }

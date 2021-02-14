@@ -5,6 +5,6 @@ trait Callable {
     fn call(interpreter: TreeWalker, environment: Environment);
 }
 
-struct Function<'a> {
-    declaration: FunDeclStatement<'a>
+struct Function {
+    declaration: FunDeclStatement
 }

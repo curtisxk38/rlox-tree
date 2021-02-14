@@ -23,7 +23,7 @@ impl Parser {
     }
 
     // program -> statement* EOF ;
-    pub fn parse<'a>(&mut self, tokens: &'a Vec<Token>) -> Result<Vec<Statement<'a>>, ()> {
+    pub fn parse(&mut self, tokens: & Vec<Token>) -> Result<Vec<Statement>, ()> {
         let mut tokens = tokens.iter().peekable();
         let mut statements: Vec<Statement> = Vec::new();
         
@@ -62,7 +62,7 @@ impl Parser {
         }
     }
 
-    fn synchronize<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) {
+    fn synchronize(&mut self, tokens: &mut Peekable<Iter<Token>>) {
         let mut next = tokens.next();
 
         loop {
@@ -105,7 +105,7 @@ impl Parser {
     }
 
     // declaration -> funDecl | varDecl | statement ;
-    fn declaration<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn declaration(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::Var => {
                 self.var_declaration(tokens)
@@ -118,17 +118,17 @@ impl Parser {
     }
 
     // funDecl -> "fun" function ;
-    fn fun_declaration<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn fun_declaration(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
         tokens.next(); // consume 'fun'
         self.function(tokens, FunctionKind::Function)?;
         todo!()
     }
 
     // function -> IDENTIFIER "(" parameters? ")" blockStatement ;
-    fn function<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>, kind: FunctionKind) -> Result<Statement<'a>, LoxError> {
+    fn function(&mut self, tokens: &mut Peekable<Iter<Token>>, kind: FunctionKind) -> Result<Statement, LoxError> {
         let name;
         match &tokens.peek().unwrap().token_type {
-            TokenType::Identifier => name = tokens.next().unwrap(),
+            TokenType::Identifier => name = tokens.next().unwrap().to_owned(),
             _ => {
                 let message = match kind {
                     FunctionKind::Function => { "expected function name"}
@@ -156,7 +156,7 @@ impl Parser {
                             }
                             match &tokens.peek().unwrap().token_type {
                                 TokenType::Identifier => {
-                                    parameters.push(tokens.next().unwrap());
+                                    parameters.push(tokens.next().unwrap().to_owned());
                                 },
                                 _ => {
                                     return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected identifier"});
@@ -211,11 +211,11 @@ impl Parser {
         }
     }
 
-    fn var_declaration<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn var_declaration(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
         tokens.next(); // consume 'var'
         let token;
         match &tokens.peek().unwrap().token_type {
-            TokenType::Identifier => token = tokens.next().unwrap(),
+            TokenType::Identifier => token = tokens.next().unwrap().to_owned(),
             _ => {
                 return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected identifier"})
             }
@@ -249,7 +249,7 @@ impl Parser {
     // | ifStatement
     // | whileStatement 
     // | forStatement ;
-    fn statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn statement(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::Print => {
                 self.print_statement(tokens)
@@ -274,8 +274,8 @@ impl Parser {
     }
 
     // printStatement -> "print" expression ";" ;
-    fn print_statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
-        let token = tokens.next().unwrap(); // "print" token
+    fn print_statement(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
+        let token = tokens.next().unwrap().to_owned(); // "print" token
         let value = self.expression(tokens)?;
         match &tokens.peek().unwrap().token_type {
             TokenType::Semicolon => {
@@ -289,7 +289,7 @@ impl Parser {
     }
 
     // blockStatement -> "{" declaration* "}" ;
-    fn block_statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<BlockStatement<'a>, LoxError> {
+    fn block_statement(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<BlockStatement, LoxError> {
         tokens.next(); // consume "{"
         let mut statements = Vec::new();
         loop {
@@ -311,7 +311,7 @@ impl Parser {
     
 
     // ifStatement -> "if" "(" expression ")" statement ("else" statement)? ;
-    fn if_statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn if_statement(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
         tokens.next(); // consume "if"
         
         match tokens.peek().unwrap().token_type {
@@ -350,7 +350,7 @@ impl Parser {
     }
 
     // whileStatement -> "while" "(" expression ")" statement ;
-    fn while_statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn while_statement(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
         tokens.next(); // consume "while"
         
         match tokens.peek().unwrap().token_type {
@@ -378,7 +378,7 @@ impl Parser {
     }
 
     // forStatement -> "for" "(" (varDecl | exprStatement | ";") expression? ";" expression? ")" statement ; 
-    fn for_statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn for_statement(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
         tokens.next(); // consume "for"
 
         match tokens.peek().unwrap().token_type {
@@ -410,7 +410,7 @@ impl Parser {
             TokenType::Semicolon => {
                 condition = Expr::Literal(Literal {
                     value: LiteralValue::BooleanValue(true), 
-                    token: tokens.peek().unwrap() // yeah it gets the ";" token idk
+                    token: tokens.peek().unwrap().to_owned().to_owned() // yeah it gets the ";" token idk
                 });
             }
             _ => {
@@ -497,7 +497,7 @@ impl Parser {
     }
 
     // exprStatement -> expression ";" ;
-    fn expression_statement<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Statement<'a>, LoxError> {
+    fn expression_statement(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
         let expr = self.expression(tokens)?;
         match &tokens.peek().unwrap().token_type {
             TokenType::Semicolon => {
@@ -511,12 +511,12 @@ impl Parser {
     }
 
     // expression -> assignment ;
-    fn expression<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn expression(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, LoxError> {
         self.assignment(tokens)
     }
 
     // assignment -> IDENTIFIER "=" assignment | logic_or ;
-    fn assignment<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn assignment(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, LoxError> {
         let expr = self.or(tokens)?;
 
         match &tokens.peek().unwrap().token_type {
@@ -525,7 +525,7 @@ impl Parser {
                 let value = self.assignment(tokens)?;
                 match &expr {
                     Expr::Variable(v) => {
-                        let name = v.token;
+                        let name = v.token.clone();
                         return Ok(Expr::Assignent(Assignent {token: name, value: Box::new(value)}));
                     },
                     _ => {}
@@ -539,7 +539,7 @@ impl Parser {
     }
 
     // logic_or -> logic_and ( "or" logic_and )* ;
-    fn or<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn or(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, LoxError> {
         let mut expr = self.and(tokens)?;
         loop {
             let operator;
@@ -552,13 +552,13 @@ impl Parser {
                 _ => break
             }
             let right = self.and(tokens)?;
-            expr = Expr::Logical(Logical {token: token, operator: operator, left: Box::new(expr), right: Box::new(right)});
+            expr = Expr::Logical(Logical {token: token.to_owned(), operator: operator, left: Box::new(expr), right: Box::new(right)});
         };
         Ok(expr)
     }
 
     // logic_and -> equality ( "and" equality )* ;
-    fn and<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn and(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, LoxError> {
         let mut expr = self.equality(tokens)?;
         loop {
             let operator;
@@ -571,13 +571,13 @@ impl Parser {
                 _ => break
             }
             let right = self.equality(tokens)?;
-            expr = Expr::Logical(Logical {token: token, operator: operator, left: Box::new(expr), right: Box::new(right)});
+            expr = Expr::Logical(Logical {token: token.to_owned(), operator: operator, left: Box::new(expr), right: Box::new(right)});
         };
         Ok(expr)
     }
 
     // equality -> comparison ( ( "!=" | "==" ) comparison )* ;
-    fn equality<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn equality(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, LoxError> {
         let mut expr = self.comparison(tokens)?;
         loop {
             let operator;
@@ -594,13 +594,13 @@ impl Parser {
                 _ => break
             }
             let right = self.comparison(tokens)?;
-            expr = Expr::Binary(Binary {token: token, operator: operator, left: Box::new(expr), right: Box::new(right)});
+            expr = Expr::Binary(Binary {token: token.to_owned(), operator: operator, left: Box::new(expr), right: Box::new(right)});
         };
         Ok(expr)
     }
 
     // comparison -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-    fn comparison<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn comparison(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, LoxError> {
         let mut expr = self.term(tokens)?;
         loop {
             let operator;
@@ -625,13 +625,13 @@ impl Parser {
                 _ => break
             }
             let right = self.term(tokens)?;
-            expr = Expr::Binary(Binary {token: token, operator: operator, left: Box::new(expr), right: Box::new(right)});
+            expr = Expr::Binary(Binary {token: token.to_owned(), operator: operator, left: Box::new(expr), right: Box::new(right)});
         };
         Ok(expr)
     }
 
     // term -> factor ( ( "-" | "+") factor )* ;
-    fn term<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn term(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, LoxError> {
         let mut expr = self.factor(tokens)?;
         loop {
             let operator;
@@ -648,13 +648,13 @@ impl Parser {
                 _ => break
             }
             let right = self.factor(tokens)?;
-            expr = Expr::Binary(Binary {token: token, operator: operator, left: Box::new(expr), right: Box::new(right)});
+            expr = Expr::Binary(Binary {token: token.to_owned(), operator: operator, left: Box::new(expr), right: Box::new(right)});
         }
         Ok(expr)
     }
 
     // factor -> unary ( ( "/" | "*") unary )* ;
-    fn factor<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError>{
+    fn factor(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, LoxError>{
         let mut expr = self.unary(tokens)?;
         loop {
             let operator;
@@ -671,25 +671,25 @@ impl Parser {
                 _ => break
             }
             let right = self.unary(tokens)?;
-            expr = Expr::Binary(Binary {token: token, operator: operator, left: Box::new(expr), right: Box::new(right)});
+            expr = Expr::Binary(Binary {token: token.to_owned(), operator: operator, left: Box::new(expr), right: Box::new(right)});
         }
         Ok(expr)
     }
 
     // unary -> ( "!" | "-" ) unary | call ;
-    fn unary<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn unary(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::Bang => {
                 let token = tokens.next().unwrap();
                 let operator = UnaryOperator::Bang;
                 let right = self.unary(tokens)?;
-                Ok(Expr::Unary(Unary {operator: operator, token: token, right: Box::new(right)}))
+                Ok(Expr::Unary(Unary {operator: operator, token: token.to_owned(), right: Box::new(right)}))
             },
             TokenType::Minus => {
                 let token = tokens.next().unwrap();
                 let operator = UnaryOperator::Minus;
                 let right = self.unary(tokens)?;
-                Ok(Expr::Unary(Unary {operator: operator, token: token, right: Box::new(right)}))
+                Ok(Expr::Unary(Unary {operator: operator, token: token.to_owned(), right: Box::new(right)}))
             }
             _ => {
                 self.call(tokens)
@@ -698,7 +698,7 @@ impl Parser {
     }
     
     // call -> primary ( "(" arguments? ")" )* ;
-    fn call<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn call(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, LoxError> {
         let p = self.primary(tokens)?;
         let mut args = Vec::new();
         let token;
@@ -707,13 +707,13 @@ impl Parser {
                 tokens.next(); // consume "("
                 match &tokens.peek().unwrap().token_type {
                     TokenType::RightParen => {
-                        token = tokens.next().unwrap(); // consume ")"
+                        token = tokens.next().unwrap().to_owned(); // consume ")"
                     },
                     _ => {
                         args = self.arguments(tokens)?;
                         match &tokens.peek().unwrap().token_type {
                             TokenType::RightParen => {
-                                token = tokens.next().unwrap(); // consume ")"
+                                token = tokens.next().unwrap().to_owned(); // consume ")"
                             },
                             _ => {
                                 return Err(LoxError {kind: LoxErrorKind::ScannerError, message: "expected ')' call"})
@@ -730,7 +730,7 @@ impl Parser {
     }
 
     // arguments -> expression ( "," expression )* ;
-    fn arguments<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Vec<Expr<'a>>, LoxError> {
+    fn arguments(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Vec<Expr>, LoxError> {
         let mut args: Vec<Expr> = Vec::new();
         loop {
             if args.len() > self.MAX_PARAMETERS {
@@ -753,15 +753,15 @@ impl Parser {
     }
 
     // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
-    fn primary<'a>(&mut self, tokens: &mut Peekable<Iter<'a, Token>>) -> Result<Expr<'a>, LoxError> {
+    fn primary(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::False | TokenType::True | TokenType::Number | TokenType::String | TokenType::Nil => {
-                let token = tokens.next().unwrap();
+                let token = tokens.next().unwrap().to_owned();
                 let value = token.literal.clone().unwrap();
                 Ok(Expr::Literal(Literal { token, value }))
             },
             TokenType::Identifier => {
-                Ok(Expr::Variable(Variable { token: tokens.next().unwrap() }))
+                Ok(Expr::Variable(Variable { token: tokens.next().unwrap().to_owned() }))
             },
             TokenType::LeftParen => {
                 tokens.next(); // consume '('

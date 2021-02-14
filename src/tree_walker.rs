@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::{Display}, rc::Rc, vec};
+use std::{collections::HashMap, fmt::{Display}, rc::Rc};
 
 use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
 
@@ -55,7 +55,6 @@ impl Environment {
         } else {
             match &mut self.parent {
                 Some(parent) => {
-                    println!("sc {}", Rc::strong_count(parent));
                     Rc::get_mut(parent).unwrap().assign(name, value)
                 },
                 None => {
@@ -141,7 +140,7 @@ impl TreeWalker {
             Some(e) => self.visit_expr(e)?,
             None => Value::NilValue
         };
-        self.define(stmt.token.lexeme, initial_value);
+        self.define(&stmt.token.lexeme, initial_value);
         Ok(())
     }
 
@@ -310,12 +309,12 @@ impl TreeWalker {
     }
 
     fn visit_variable(&self, expr: &Variable) -> Result<Value, LoxError> {
-        self.get(expr.token.lexeme)
+        self.get(&expr.token.lexeme)
     }
 
     fn visit_assignment(&mut self, expr: &Assignent) -> Result<Value, LoxError> {
         let value = self.visit_expr(expr.value.as_ref())?;
-        self.assign(expr.token.lexeme, value)
+        self.assign(&expr.token.lexeme, value)
     }
 
     fn visit_logical(&mut self, expr: &Logical) -> Result<Value, LoxError> {

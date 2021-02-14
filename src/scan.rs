@@ -6,7 +6,7 @@ use crate::tokens::TokenType;
 
 pub(crate) struct Scanner<'c> {
     source: &'c String,
-    pub tokens: Vec<Token<'c>>,
+    pub tokens: Vec<Token>,
     start: usize,
     current: usize,
     line: i32
@@ -28,7 +28,7 @@ impl<'c> Scanner<'c> {
             self.scan_token(&mut chars)?;
             self.start = self.current;
         }
-        self.tokens.push(Token {lexeme: "", line: self.line, literal: None, token_type: TokenType::EOF});
+        self.tokens.push(Token {lexeme: "".to_owned(), line: self.line, literal: None, token_type: TokenType::EOF});
         Ok(())
     }
 
@@ -116,7 +116,7 @@ impl<'c> Scanner<'c> {
 
     fn add_simple_token(&mut self, token_type: TokenType) {
         let lexeme = &self.source[self.start..self.current];
-        let token = Token {token_type: token_type, lexeme: lexeme, literal: None, line: self.line};
+        let token = Token {token_type: token_type, lexeme: lexeme.to_owned(), literal: None, line: self.line};
         self.tokens.push(token);
     }
 
@@ -143,7 +143,7 @@ impl<'c> Scanner<'c> {
         //  so we don't include the first and last chars of the lexeme
         let literal = String::from(&self.source[self.start+1..self.current-1]);
         self.tokens.push( Token { token_type: TokenType::String, line: self.line,
-             lexeme: lexeme, literal: Some(LiteralValue::StringValue(literal))});
+             lexeme: lexeme.to_owned(), literal: Some(LiteralValue::StringValue(literal))});
         Ok(())
     }
 
@@ -194,7 +194,7 @@ impl<'c> Scanner<'c> {
         let number_conversion = lexeme.parse::<f64>();
         if let Ok(number) = number_conversion {
             let literal = Some(LiteralValue::NumberValue(number));
-            self.tokens.push( Token { token_type: TokenType::Number, line: self.line, lexeme: lexeme, literal: literal});
+            self.tokens.push( Token { token_type: TokenType::Number, line: self.line, lexeme: lexeme.to_owned(), literal: literal});
             Ok(())
         } else {
             Err(LoxError { kind: LoxErrorKind::ScannerError, message: "unable to parse float"})
@@ -239,7 +239,7 @@ impl<'c> Scanner<'c> {
             TokenType::Nil => Some(LiteralValue::NilValue),
             _ => None
         };
-        self.tokens.push(Token {token_type: token_type, line: self.line, lexeme: lexeme, literal: literal});
+        self.tokens.push(Token {token_type: token_type, line: self.line, lexeme: lexeme.to_owned(), literal: literal});
         Ok(())
     }
 }
