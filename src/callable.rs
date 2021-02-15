@@ -1,4 +1,4 @@
-use crate::{ast::FunDeclStatement, error::LoxError, tree_walker::{Environment, TreeWalker, Value}};
+use crate::{ast::FunDeclStatement, error::{LoxError, LoxErrorKind}, tree_walker::{Environment, TreeWalker, Value}};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Function {
@@ -13,9 +13,22 @@ impl Function {
             env.define(&self.declaration.parameters.get(index).unwrap().lexeme, arguments.get(index).unwrap().to_owned())
         }
 
-        interpreter.execute_block(&self.declaration.body.statements, env)?;
-        // todo add return statement
-        Ok(Value::NilValue)
+        let result = interpreter.execute_block(&self.declaration.body.statements, env);
+        match result {
+            Ok(_) => {
+                Ok(Value::NilValue)
+            },
+            Err(e) => {
+                match e.kind {
+                    LoxErrorKind::Return(value) => {
+                        Ok(value)
+                    },
+                    _ => {
+                        Err(e)
+                    }
+                }
+            }
+        }
     }
 
     pub fn arity(&self) -> usize {

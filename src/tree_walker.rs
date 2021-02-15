@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::{Display}, rc::Rc};
 
-use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
+use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
 use crate::callable::Function;
 
 #[derive(Debug)]
@@ -114,6 +114,9 @@ impl TreeWalker {
             Statement::FunDeclStatement(f) => {
                 self.visit_fun_decl_statement(f)
             }
+            Statement::ReturnStatement(r) => {
+                self.visit_return_statement(r)
+            }
         }
     }
 
@@ -170,6 +173,18 @@ impl TreeWalker {
         let fun = Function { declaration: stmt.to_owned() };
         self.define(&stmt.name.lexeme, Value::Callable(fun));
         Ok(())
+    }
+
+    fn visit_return_statement<'b>(&mut self, stmt: &'b ReturnStatement) -> Result<(), LoxError> {
+        match &stmt.value {
+            Some(expr) => {
+                let value = self.visit_expr(&expr)?;
+                Err(LoxError {kind: LoxErrorKind::Return(value), message: ""})
+            },
+            _ => {
+                Ok(())
+            }
+        }
     }
 
     fn visit_expr(&mut self, expr: &Expr) -> Result<Value, LoxError> {

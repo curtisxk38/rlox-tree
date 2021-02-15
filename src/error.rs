@@ -2,18 +2,21 @@
 use core::fmt;
 use std::error::Error;
 
+use crate::tree_walker::Value;
+
 #[derive(Debug)]
-pub struct LoxError {
+pub(crate) struct LoxError {
     pub message: &'static str,
     pub kind: LoxErrorKind
 }
 
 #[derive(Debug)]
-pub enum LoxErrorKind {
+pub(crate) enum LoxErrorKind {
     ScannerError,
     SyntaxError,
     TypeError,
     NameError,
+    Return(Value), // dirty hack
 }
 
 impl Error for LoxError {}
@@ -25,6 +28,7 @@ impl fmt::Display for LoxError {
             LoxErrorKind::SyntaxError => write!(f, "SyntaxError"),
             LoxErrorKind::TypeError => write!(f, "TypeError"),
             LoxErrorKind::NameError => write!(f, "NameError"),
+            LoxErrorKind::Return(_) => write!(f, "ReturnValue"),
         }
     }
 }

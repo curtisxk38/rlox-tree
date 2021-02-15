@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Assignent, Binary, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
+use crate::{ast::{Assignent, Binary, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -247,7 +247,8 @@ impl Parser {
     // | blockStatement 
     // | ifStatement
     // | whileStatement 
-    // | forStatement ;
+    // | forStatement
+    // | returnStatement ;
     fn statement(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::Print => {
@@ -264,6 +265,9 @@ impl Parser {
             },
             TokenType::For => {
                 self.for_statement(tokens)
+            },
+            TokenType::Return => {
+                self.return_statement(tokens)
             }
             _ => {
                 // if the next token doesn't like any other statement, assume its an expr statement
@@ -493,6 +497,30 @@ impl Parser {
                 Ok(while_node)
             }
         }
+    }
+
+    // returnStatement -> "return" expression? ";" ;
+    fn return_statement(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
+        let keyword = tokens.next().unwrap().to_owned(); // consume "return"
+        let value;
+        match &tokens.peek().unwrap().token_type {
+            TokenType::Semicolon => {
+                tokens.next(); // consume ";"
+                value = None;
+            },
+            _ => {
+                value = Some(self.expression(tokens)?);
+                match &tokens.peek().unwrap().token_type {
+                    TokenType::Semicolon => {
+                        tokens.next(); // consume ";"
+                    },
+                    _ => {
+                        return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ';' after return statement"})  
+                    }
+                }
+            }
+        }
+        Ok(Statement::ReturnStatement(ReturnStatement {keyword, value}))
     }
 
     // exprStatement -> expression ";" ;
