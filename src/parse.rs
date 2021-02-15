@@ -4,10 +4,10 @@ use crate::{ast::{Assignent, Binary, BlockStatement, Call, Expr, ExpressionState
 use crate::ast::{BinaryOperator};
 
 
+const MAX_PARAMETERS: usize = 255;
 
 pub(crate) struct Parser {
     pub errors: Vec<LoxError>,
-    MAX_PARAMETERS: usize
 }
 
 enum FunctionKind {
@@ -19,7 +19,7 @@ impl Parser {
     
 
     pub fn new() -> Parser {
-        Parser { errors: Vec::new(), MAX_PARAMETERS: 255 }
+        Parser { errors: Vec::new() }
     }
 
     // program -> statement* EOF ;
@@ -147,7 +147,7 @@ impl Parser {
                     },
                     _ => {
                         loop {
-                            if parameters.len() > self.MAX_PARAMETERS {
+                            if parameters.len() > MAX_PARAMETERS {
                                 // no need to return the Error
                                 // that would mean the parser is in a bad state and needs to synchronize
                                 // but we don't need to do that for this type of error
@@ -760,7 +760,7 @@ impl Parser {
     fn arguments(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Vec<Expr>, LoxError> {
         let mut args: Vec<Expr> = Vec::new();
         loop {
-            if args.len() > self.MAX_PARAMETERS {
+            if args.len() > MAX_PARAMETERS {
                 // no need to return the Error
                 // that would mean the parser is in a bad state and needs to synchronize
                 // but we don't need to do that for this type of error
