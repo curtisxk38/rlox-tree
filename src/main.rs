@@ -1,12 +1,12 @@
-use std::{env};
+use std::env;
 use std::fs;
 use std::io;
 use std::process;
 
 use error::LoxError;
-use io::{Write};
-use output::{Printer, Recorder};
-use tree_walker::{TreeWalker};
+use io::Write;
+use output::Printer;
+use tree_walker::TreeWalker;
 
 mod scan;
 mod tokens;
@@ -119,6 +119,9 @@ macro_rules! program_tests {
     $(
         #[test]
         fn $name() {
+            use std::rc::Rc;
+            use output::Recorder;
+            use tree_walker::Environment;
             // read file
             let contents = fs::read_to_string($value)
                     .expect("Something went wrong reading the file");
