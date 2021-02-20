@@ -1,4 +1,4 @@
-use crate::{ast::FunDeclStatement, error::{LoxError, LoxErrorKind}, tree_walker::{Environment, TreeWalker, Value}};
+use crate::{ast::FunDeclStatement, error::{LoxError, LoxErrorKind}, output::Outputter, tree_walker::{Environment, TreeWalker, Value}};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Function {
@@ -6,7 +6,7 @@ pub(crate) struct Function {
 }
 
 impl Function {
-    pub fn call(& self, interpreter:  &mut TreeWalker, arguments: Vec<Value>) -> Result<Value, LoxError>{
+    pub fn call<T: Outputter>(& self, interpreter:  &mut TreeWalker<T>, arguments: Vec<Value>) -> Result<Value, LoxError>{
         let mut env = Environment::new();
         // ASSUMPTION made: arguments.len() = self.declaration.parameters.len()
         for index  in 0..arguments.len() {

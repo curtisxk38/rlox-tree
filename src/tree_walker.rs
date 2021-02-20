@@ -1,11 +1,12 @@
 use std::{collections::HashMap, fmt::{Display}, rc::Rc};
 
-use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
+use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, output::{Outputter, Printer}, tokens::LiteralValue};
 use crate::callable::Function;
 
 #[derive(Debug)]
-pub(crate) struct TreeWalker {
-    environment: Rc<Environment>,
+pub(crate) struct TreeWalker<T: Outputter> {
+    pub environment: Rc<Environment>,
+    pub outputter: T,
 }
 
 #[derive(Debug)]
@@ -86,9 +87,9 @@ impl Display for Value {
     }
 }
 
-impl TreeWalker {
-    pub fn new() -> TreeWalker {
-        TreeWalker { environment: Rc::new(Environment::new()) }
+impl<T: Outputter> TreeWalker<T> {
+    pub fn new() -> TreeWalker<Printer> {
+        TreeWalker { environment: Rc::new(Environment::new()), outputter: Printer{} }
     }
     
     pub fn visit_statement<'b>(&mut self, stmt: &'b Statement) -> Result<(), LoxError> {
@@ -122,7 +123,7 @@ impl TreeWalker {
 
     fn visit_print_statement(&mut self, stmt: &PrintStatement) -> Result<(), LoxError> {
         let value = self.visit_expr(&stmt.value)?;
-        println!("{}", value);
+        self.outputter.output_value(value);
         Ok(())
     }
 

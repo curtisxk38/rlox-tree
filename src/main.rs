@@ -1,11 +1,12 @@
-use std::env;
+use std::{env};
 use std::fs;
 use std::io;
 use std::process;
 
 use error::LoxError;
 use io::{Write};
-use tree_walker::TreeWalker;
+use output::{Printer, Recorder};
+use tree_walker::{TreeWalker};
 
 mod scan;
 mod tokens;
@@ -14,16 +15,17 @@ mod error;
 mod ast;
 mod tree_walker;
 mod callable;
+mod output;
 
 struct Interpreter {
     had_error: bool,
-    tree_walker: tree_walker::TreeWalker,
+    tree_walker: tree_walker::TreeWalker<Printer>,
 }
 
 impl  Interpreter {
 
     pub fn new() -> Interpreter {
-        return Interpreter { had_error: false, tree_walker: TreeWalker::new() };
+        return Interpreter { had_error: false, tree_walker: TreeWalker::<Printer>::new() };
     }
 
     fn run_file(&mut self, filename: &String) {
@@ -110,3 +112,46 @@ fn main() {
         lox.run_prompt();
     }
 }
+
+
+macro_rules! program_tests {
+    ($($name:ident: $value:expr,)*) => {
+    $(
+        #[test]
+        fn $name() {
+            // read file
+            let contents = fs::read_to_string($value)
+                    .expect("Something went wrong reading the file");
+            let lines:Vec<&str> = contents.split("\n").collect();
+            let mut output = Vec::new();
+            // parse expected output from comments at the start of .lox file
+            for line in lines {
+                if &line[0..2] != "//" {
+                    break;
+                }
+                output.push(String::from(&line[2..]))
+            }
+            // set up interpreter for running the test program
+            let outputter = Recorder{outputted: Vec::new()};
+            let mut interpreter = TreeWalker::<Recorder>{ outputter, environment: Rc::new(Environment::new()) };
+
+            // standard interpreter run
+            let mut scanner = scan::Scanner::new(&contents);
+            scanner.scan().expect("scan error");
+            let mut parser = parse::Parser::new();
+            let statements = parser.parse(&scanner.tokens).expect("parse errors");
+            
+            for statement in statements {
+                let interpreted = interpreter.visit_statement(&statement);
+                interpreted.expect("runtime error");
+            }
+
+            assert_eq!(output, interpreter.outputter.outputted);
+        }
+    )*
+    }
+}
+
+program_tests!(
+    recursive_fib: "tests/recursive_fib.lox",
+);
