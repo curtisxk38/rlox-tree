@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, fmt::{Display}, rc::Rc, unreachable};
+use std::{cell::RefCell, collections::HashMap, fmt::{Display}, rc::Rc};
 
 use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, output::{Outputter, Printer}, tokens::LiteralValue};
 use crate::callable::Function;
@@ -393,9 +393,6 @@ impl<T: Outputter> TreeWalker<T> {
     }
 
     fn define<'b>(&mut self, name: &'b str, value: Value) {
-        // TODO is unwrapping here okay?
-        // I think it is because the environments are basically like a linked list
-        // and we are only using the tail at any given point in time
         self.environment.borrow_mut().define(name, value)
     }
 
@@ -404,9 +401,6 @@ impl<T: Outputter> TreeWalker<T> {
     }
 
     fn assign<'b>(&mut self, name: &'b str, value: Value) -> Result<Value, LoxError> {
-        // TODO is unwrapping here okay?
-        // I think it is because the environments are basically like a linked list
-        // and we are only using the tail at any given point in time
         match self.environment.borrow_mut().assign(name, &value) {
             Ok(_) => Ok(value),
             Err(e) => Err(e)

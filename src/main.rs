@@ -159,6 +159,7 @@ macro_rules! program_tests {
 program_tests!(
     basic_operation: "tests/basic_operation.lox",
     basic_function: "tests/basic_function.lox",
+    fun_in_for: "tests/fun_in_for.lox",
     recursive_fib: "tests/recursive_fib.lox",
     closure: "tests/closure.lox",
 );
