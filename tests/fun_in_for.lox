@@ -1,0 +1,8 @@
+
+fun cube(n) {
+  return n*n*n;
+}
+
+for (var i = 0; i < 5; i = i + 1) {
+  print cube(i);
+}

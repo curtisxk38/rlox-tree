@@ -1,18 +1,18 @@
-use std::{collections::HashMap, fmt::{Display}, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt::{Display}, rc::Rc, unreachable};
 
 use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, output::{Outputter, Printer}, tokens::LiteralValue};
 use crate::callable::Function;
 
 #[derive(Debug)]
 pub(crate) struct TreeWalker<T: Outputter> {
-    pub environment: Rc<Environment>,
+    pub environment: Rc<RefCell<Environment>>,
     pub outputter: T,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Environment {
-    values: HashMap<String, Value>,
-    parent: Option<Rc<Environment>>,
+    pub values: HashMap<String, Value>,
+    pub parent: Option<Rc<RefCell<Environment>>>,
 }
 
 impl Environment {
@@ -39,7 +39,7 @@ impl Environment {
             None => {
                 match &self.parent {
                     Some(parent) => {
-                        parent.get(name)
+                        parent.borrow().get(name)
                     }
                     None => {
                         Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
@@ -56,13 +56,19 @@ impl Environment {
         } else {
             match &mut self.parent {
                 Some(parent) => {
-                    Rc::get_mut(parent).unwrap().assign(name, value)
+                    parent.borrow_mut().assign(name, value)
                 },
                 None => {
                     Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
                 }
             }
         } 
+    }
+}
+
+impl Display for Environment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Keys: {:?}, Has Parent?: {}", self.values.keys(), match self.parent { Some(_) => "yes", None => "no"})
     }
 }
 
@@ -89,7 +95,7 @@ impl Display for Value {
 
 impl<T: Outputter> TreeWalker<T> {
     pub fn new() -> TreeWalker<Printer> {
-        TreeWalker { environment: Rc::new(Environment::new()), outputter: Printer{} }
+        TreeWalker { environment: Rc::new(RefCell::new(Environment::new())), outputter: Printer{} }
     }
     
     pub fn visit_statement<'b>(&mut self, stmt: &'b Statement) -> Result<(), LoxError> {
@@ -144,8 +150,9 @@ impl<T: Outputter> TreeWalker<T> {
     }
 
     fn visit_block_statement<'b>(&mut self, stmt: &'b BlockStatement) -> Result<(), LoxError> {
-        let env = Environment::new();
-        self.execute_block(&stmt.statements, env)
+        let mut env = Environment::new();
+        env.parent = Some(Rc::clone(&self.environment));
+        self.execute_block(&stmt.statements, Rc::new(RefCell::new(env)))
     }
 
     fn visit_if_statement<'b>(&mut self, stmt: &'b IfStatement) -> Result<(), LoxError> {
@@ -171,7 +178,7 @@ impl<T: Outputter> TreeWalker<T> {
     }
 
     fn visit_fun_decl_statement<'b>(&mut self, stmt: &'b FunDeclStatement) -> Result<(), LoxError> {
-        let fun = Function { declaration: stmt.to_owned() };
+        let fun = Function::new(stmt.to_owned(), Rc::clone(&self.environment));
         self.define(&stmt.name.lexeme, Value::Callable(fun));
         Ok(())
     }
@@ -369,46 +376,38 @@ impl<T: Outputter> TreeWalker<T> {
         }
     }
 
-    pub fn execute_block(&mut self, statements: &Vec<Statement>, mut env: Environment) -> Result<(), LoxError> {
-        env.parent = Some(Rc::clone(&self.environment));
-        self.environment = Rc::new(env);
+    pub fn execute_block(&mut self, statements: &Vec<Statement>, env: Rc<RefCell<Environment>>) -> Result<(), LoxError> {
+        let previous_env = Rc::clone(&self.environment);
+        self.environment = env;
         for statement in statements {
             let result = self.visit_statement(statement);
             if let Err(e) = result {
                 // clean up on error
-                self.clean_up_env();
+                self.environment = previous_env;
                 return Err(e)
             }
         }
-        self.clean_up_env();
+        // clean up
+        self.environment = previous_env;
         Ok(())
-    }
-
-    fn clean_up_env(&mut self) {
-        match &self.environment.parent {
-            Some(x) => {
-                self.environment = Rc::clone(&x)
-            }
-            None => {} // unreachable
-        };
     }
 
     fn define<'b>(&mut self, name: &'b str, value: Value) {
         // TODO is unwrapping here okay?
         // I think it is because the environments are basically like a linked list
         // and we are only using the tail at any given point in time
-        Rc::get_mut(&mut self.environment).unwrap().define(name, value)
+        self.environment.borrow_mut().define(name, value)
     }
 
     fn get<'b>(&self, name: &'b str) -> Result<Value, LoxError> {
-        self.environment.get(name)
+        self.environment.borrow().get(name)
     }
 
     fn assign<'b>(&mut self, name: &'b str, value: Value) -> Result<Value, LoxError> {
         // TODO is unwrapping here okay?
         // I think it is because the environments are basically like a linked list
         // and we are only using the tail at any given point in time
-        match Rc::get_mut(&mut self.environment).unwrap().assign(name, &value) {
+        match self.environment.borrow_mut().assign(name, &value) {
             Ok(_) => Ok(value),
             Err(e) => Err(e)
         }

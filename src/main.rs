@@ -122,6 +122,7 @@ macro_rules! program_tests {
             use std::rc::Rc;
             use output::Recorder;
             use tree_walker::Environment;
+            use std::cell::RefCell;
             // read file
             let contents = fs::read_to_string($value)
                     .expect("Something went wrong reading the file");
@@ -129,14 +130,14 @@ macro_rules! program_tests {
             let mut output = Vec::new();
             // parse expected output from comments at the start of .lox file
             for line in lines {
-                if &line[0..2] != "//" {
+                if line.len() < 3 || &line[0..2] != "//" {
                     break;
                 }
                 output.push(String::from(&line[2..]))
             }
             // set up interpreter for running the test program
             let outputter = Recorder{outputted: Vec::new()};
-            let mut interpreter = TreeWalker::<Recorder>{ outputter, environment: Rc::new(Environment::new()) };
+            let mut interpreter = TreeWalker::<Recorder>{ outputter, environment: Rc::new(RefCell::new(Environment::new())) };
 
             // standard interpreter run
             let mut scanner = scan::Scanner::new(&contents);
@@ -156,5 +157,8 @@ macro_rules! program_tests {
 }
 
 program_tests!(
+    basic_operation: "tests/basic_operation.lox",
+    basic_function: "tests/basic_function.lox",
     recursive_fib: "tests/recursive_fib.lox",
+    closure: "tests/closure.lox",
 );

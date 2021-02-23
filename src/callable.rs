@@ -1,19 +1,27 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{ast::FunDeclStatement, error::{LoxError, LoxErrorKind}, output::Outputter, tree_walker::{Environment, TreeWalker, Value}};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Function {
-    pub declaration: FunDeclStatement
+    declaration: FunDeclStatement,
+    closure: Rc<RefCell<Environment>>
 }
 
 impl Function {
+    pub fn new(declaration: FunDeclStatement, closure: Rc<RefCell<Environment>>) -> Function {
+        Function { declaration, closure }
+    }
+
     pub fn call<T: Outputter>(& self, interpreter:  &mut TreeWalker<T>, arguments: Vec<Value>) -> Result<Value, LoxError>{
         let mut env = Environment::new();
+        env.parent = Some(Rc::clone(&self.closure));
         // ASSUMPTION made: arguments.len() = self.declaration.parameters.len()
         for index  in 0..arguments.len() {
             env.define(&self.declaration.parameters.get(index).unwrap().lexeme, arguments.get(index).unwrap().to_owned())
         }
 
-        let result = interpreter.execute_block(&self.declaration.body.statements, env);
+        let result = interpreter.execute_block(&self.declaration.body.statements, Rc::new(RefCell::new(env)));
         match result {
             Ok(_) => {
                 Ok(Value::NilValue)
