@@ -5,7 +5,6 @@ use std::process;
 
 use error::LoxError;
 use io::Write;
-use output::Printer;
 use tree_walker::TreeWalker;
 
 mod scan;
@@ -19,13 +18,13 @@ mod output;
 
 struct Interpreter {
     had_error: bool,
-    tree_walker: tree_walker::TreeWalker<Printer>,
+    tree_walker: tree_walker::TreeWalker,
 }
 
 impl  Interpreter {
 
     pub fn new() -> Interpreter {
-        return Interpreter { had_error: false, tree_walker: TreeWalker::<Printer>::new() };
+        return Interpreter { had_error: false, tree_walker: TreeWalker::new() };
     }
 
     fn run_file(&mut self, filename: &String) {
@@ -137,7 +136,7 @@ macro_rules! program_tests {
             }
             // set up interpreter for running the test program
             let outputter = Recorder{outputted: Vec::new()};
-            let mut interpreter = TreeWalker::<Recorder>{ outputter, environment: Rc::new(RefCell::new(Environment::new())) };
+            let mut interpreter = TreeWalker{ outputter, environment: Rc::new(RefCell::new(Environment::new())) };
 
             // standard interpreter run
             let mut scanner = scan::Scanner::new(&contents);

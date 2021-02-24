@@ -1,12 +1,18 @@
 use std::{cell::RefCell, collections::HashMap, fmt::{Display}, rc::Rc};
 
-use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, output::{Outputter, Printer}, tokens::LiteralValue};
+use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, callable::LoxCallable, error::{LoxError, LoxErrorKind}, tokens::LiteralValue};
+
 use crate::callable::Function;
 
+#[cfg(test)]
+use crate::output::Recorder as Outputter;
+#[cfg(not(test))]
+use crate::output::Printer as Outputter;
+
 #[derive(Debug)]
-pub(crate) struct TreeWalker<T: Outputter> {
+pub(crate) struct TreeWalker {
     pub environment: Rc<RefCell<Environment>>,
-    pub outputter: T,
+    pub outputter: Outputter,
 }
 
 #[derive(Debug, Clone)]
@@ -93,9 +99,9 @@ impl Display for Value {
     }
 }
 
-impl<T: Outputter> TreeWalker<T> {
-    pub fn new() -> TreeWalker<Printer> {
-        TreeWalker { environment: Rc::new(RefCell::new(Environment::new())), outputter: Printer{} }
+impl TreeWalker {
+    pub fn new() -> TreeWalker {
+        TreeWalker { environment: Rc::new(RefCell::new(Environment::new())), outputter: Outputter::new() }
     }
     
     pub fn visit_statement<'b>(&mut self, stmt: &'b Statement) -> Result<(), LoxError> {
