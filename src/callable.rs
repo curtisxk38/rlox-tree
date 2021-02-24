@@ -1,6 +1,12 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, fmt::{Debug, Display}, rc::Rc};
 
-use crate::{ast::FunDeclStatement, error::{LoxError, LoxErrorKind}, output::Outputter, tree_walker::{Environment, TreeWalker, Value}};
+use crate::{ast::FunDeclStatement, error::{LoxError, LoxErrorKind}, tree_walker::{Environment, TreeWalker, Value}};
+
+pub(crate) trait LoxCallable: Display + Debug + Clone {
+    fn call(& self, interpreter:  &mut TreeWalker, arguments: Vec<Value>) -> Result<Value, LoxError>;
+
+    fn arity(&self) -> usize;
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct Function {
@@ -12,13 +18,24 @@ impl Function {
     pub fn new(declaration: FunDeclStatement, closure: Rc<RefCell<Environment>>) -> Function {
         Function { declaration, closure }
     }
+}
 
-    pub fn call<T: Outputter>(& self, interpreter:  &mut TreeWalker<T>, arguments: Vec<Value>) -> Result<Value, LoxError>{
+impl Display for Function {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<fn {}>", self.declaration.name.lexeme)
+    }
+}
+
+impl LoxCallable for Function {
+
+    fn call(& self, interpreter:  &mut TreeWalker, mut arguments: Vec<Value>) -> Result<Value, LoxError>{
         let mut env = Environment::new();
         env.parent = Some(Rc::clone(&self.closure));
         // ASSUMPTION made: arguments.len() = self.declaration.parameters.len()
-        for index  in 0..arguments.len() {
-            env.define(&self.declaration.parameters.get(index).unwrap().lexeme, arguments.get(index).unwrap().to_owned())
+        for parameter in &self.declaration.parameters {
+            // get the first item in the list
+            let arg = arguments.remove(0);
+            env.define(&parameter.lexeme, arg)
         }
 
         let result = interpreter.execute_block(&self.declaration.body.statements, Rc::new(RefCell::new(env)));
@@ -39,7 +56,7 @@ impl Function {
         }
     }
 
-    pub fn arity(&self) -> usize {
+    fn arity(&self) -> usize {
         self.declaration.parameters.len()
     }
 }

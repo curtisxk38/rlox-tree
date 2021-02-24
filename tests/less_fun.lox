@@ -1,0 +1,9 @@
+//true
+//false
+
+fun less(a, b) {
+  return a < b;
+}
+
+print(less(4,5));
+print(less(6,6));
