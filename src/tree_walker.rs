@@ -84,7 +84,7 @@ pub(crate) enum Value {
     StringValue(String),
     BooleanValue(bool),
     NilValue,
-    Callable(Function),
+    Callable(Box<dyn LoxCallable>),
 }
 
 impl Display for Value {
@@ -185,7 +185,7 @@ impl TreeWalker {
 
     fn visit_fun_decl_statement<'b>(&mut self, stmt: &'b FunDeclStatement) -> Result<(), LoxError> {
         let fun = Function::new(stmt.to_owned(), Rc::clone(&self.environment));
-        self.define(&stmt.name.lexeme, Value::Callable(fun));
+        self.define(&stmt.name.lexeme, Value::Callable(Box::new(fun)));
         Ok(())
     }
 

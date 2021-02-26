@@ -2,10 +2,27 @@ use std::{cell::RefCell, fmt::{Debug, Display}, rc::Rc};
 
 use crate::{ast::FunDeclStatement, error::{LoxError, LoxErrorKind}, tree_walker::{Environment, TreeWalker, Value}};
 
-pub(crate) trait LoxCallable: Display + Debug + Clone {
+pub(crate) trait LoxCallable: Display + Debug + LoxCallableClone {
     fn call(& self, interpreter:  &mut TreeWalker, arguments: Vec<Value>) -> Result<Value, LoxError>;
 
     fn arity(&self) -> usize;
+}
+
+pub(crate) trait LoxCallableClone {
+    fn clone_box(&self) -> Box<dyn LoxCallable>;
+}
+
+impl<T> LoxCallableClone for T where
+    T: 'static + LoxCallable + Clone {
+        fn clone_box(&self) -> Box<dyn LoxCallable> {
+            Box::new(self.clone())
+        }
+    }
+
+impl Clone for Box<dyn LoxCallable> {
+    fn clone(&self) -> Box<dyn LoxCallable> {
+        self.clone_box()
+    }
 }
 
 #[derive(Debug, Clone)]
