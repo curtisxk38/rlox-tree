@@ -15,7 +15,7 @@ mod ast;
 mod tree_walker;
 mod callable;
 mod output;
-
+mod native;
 
 struct Interpreter {
     had_error: bool,
@@ -119,10 +119,7 @@ macro_rules! program_tests {
     $(
         #[test]
         fn $name() {
-            use std::rc::Rc;
             use output::Recorder;
-            use tree_walker::Environment;
-            use std::cell::RefCell;
             // read file
             let contents = fs::read_to_string($value)
                     .expect("Something went wrong reading the file");
@@ -137,8 +134,8 @@ macro_rules! program_tests {
             }
             // set up interpreter for running the test program
             let outputter = Recorder{outputted: Vec::new()};
-            let mut interpreter = TreeWalker{ outputter, environment: Rc::new(RefCell::new(Environment::new())) };
-
+            let mut interpreter = TreeWalker::new_from_outputter(outputter);
+            
             // standard interpreter run
             let mut scanner = scan::Scanner::new(&contents);
             scanner.scan().expect("scan error");
@@ -163,4 +160,5 @@ program_tests!(
     fun_in_for: "tests/fun_in_for.lox",
     recursive_fib: "tests/recursive_fib.lox",
     closure: "tests/closure.lox",
+    print_clock: "tests/print_clock.lox",
 );

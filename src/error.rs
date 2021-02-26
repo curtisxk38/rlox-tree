@@ -16,6 +16,7 @@ pub(crate) enum LoxErrorKind {
     SyntaxError,
     TypeError,
     NameError,
+    RuntimeError,
     Return(Value), // dirty hack
 }
 
@@ -29,6 +30,7 @@ impl fmt::Display for LoxError {
             LoxErrorKind::TypeError => write!(f, "TypeError"),
             LoxErrorKind::NameError => write!(f, "NameError"),
             LoxErrorKind::Return(_) => write!(f, "ReturnValue"),
+            LoxErrorKind::RuntimeError => {write!(f, "RuntimeError")},
         }
     }
 }
