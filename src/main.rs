@@ -161,4 +161,5 @@ program_tests!(
     recursive_fib: "tests/recursive_fib.lox",
     closure: "tests/closure.lox",
     print_clock: "tests/print_clock.lox",
+    scoping: "tests/scoping.lox",
 );
