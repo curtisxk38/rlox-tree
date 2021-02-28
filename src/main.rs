@@ -5,6 +5,7 @@ use std::process;
 
 use error::LoxError;
 use io::Write;
+use resolver::Resolver;
 use tree_walker::TreeWalker;
 
 mod scan;
@@ -16,6 +17,7 @@ mod tree_walker;
 mod callable;
 mod output;
 mod native;
+mod resolver;
 
 struct Interpreter {
     had_error: bool,
@@ -68,6 +70,15 @@ impl  Interpreter {
                 let parsed = parser.parse(&scanner.tokens);
                 match parsed {
                     Ok(statements) => {
+
+                        let mut resolver = Resolver::new(&self.tree_walker);
+                        resolver.resolve(&statements);
+                        if resolver.errors.len() > 0 {
+                            for error in resolver.errors {
+                                self.error(error);
+                            }
+                            return;
+                        }
                         for statement in statements {
                             let interpreted = self.tree_walker.visit_statement(&statement);
                             match interpreted {
@@ -141,6 +152,11 @@ macro_rules! program_tests {
             scanner.scan().expect("scan error");
             let mut parser = parse::Parser::new();
             let statements = parser.parse(&scanner.tokens).expect("parse errors");
+            let mut resolver = Resolver::new(&interpreter);
+            resolver.resolve(&statements);
+            if resolver.errors.len() > 0 {
+               panic!("error resolving")
+            }
             
             for statement in statements {
                 let interpreted = interpreter.visit_statement(&statement);
