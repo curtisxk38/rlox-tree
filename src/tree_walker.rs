@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, fmt::{Display}, rc::Rc};
 
-use crate::{ast::{Assignent, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, callable::LoxCallable, error::{LoxError, LoxErrorKind}, native::ClockCallable, tokens::LiteralValue};
+use crate::{ast::{Assignment, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, callable::LoxCallable, error::{LoxError, LoxErrorKind}, native::ClockCallable, tokens::LiteralValue};
 
 use crate::callable::Function;
 
@@ -224,7 +224,7 @@ impl TreeWalker {
             Expr::Variable(e) => {
                 self.visit_variable(e)
             }
-            Expr::Assignent(e) => {
+            Expr::Assignment(e) => {
                 self.visit_assignment(e)
             }
             Expr::Logical(l) => {
@@ -344,7 +344,7 @@ impl TreeWalker {
         self.get(&expr.token.lexeme)
     }
 
-    fn visit_assignment(&mut self, expr: &Assignent) -> Result<Value, LoxError> {
+    fn visit_assignment(&mut self, expr: &Assignment) -> Result<Value, LoxError> {
         let value = self.visit_expr(expr.value.as_ref())?;
         self.assign(&expr.token.lexeme, value)
     }

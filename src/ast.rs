@@ -34,7 +34,7 @@ pub(crate) enum Expr {
     Literal(Literal),
     Grouping(Grouping),
     Variable(Variable),
-    Assignent(Assignent),
+    Assignment(Assignment),
     Logical(Logical),
     Call(Call),
 }
@@ -71,7 +71,7 @@ pub(crate) struct Variable {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Assignent {
+pub(crate) struct Assignment {
     pub token: Token,
     pub value: Box<Expr>
 }

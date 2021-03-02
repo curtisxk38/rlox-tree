@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ast::{Assignent, Binary, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, Grouping, IfStatement, Logical, PrintStatement, ReturnStatement, Statement, Unary, VarDeclStatement, Variable, WhileStatement}, error::LoxError, tokens::Token, tree_walker::TreeWalker};
+use crate::{ast::{Assignment, Binary, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, Grouping, IfStatement, Logical, PrintStatement, ReturnStatement, Statement, Unary, VarDeclStatement, Variable, WhileStatement}, error::LoxError, tokens::Token, tree_walker::TreeWalker};
 
 
 
@@ -53,7 +53,7 @@ impl<'i> Resolver<'i> {
             Expr::Literal(_) => { /* nothing to resolve */ }
             Expr::Grouping(g) => { self.visit_grouping(g)}
             Expr::Variable(v) => { self.visit_variable(v) }
-            Expr::Assignent(a) => { self.visit_assignment(a) }
+            Expr::Assignment(a) => { self.visit_assignment(a) }
             Expr::Logical(l) => { self.visit_logical(l) }
             Expr::Call(c) => { self.visit_call(c) }
         }
@@ -121,7 +121,7 @@ impl<'i> Resolver<'i> {
         self.resolve_local(&expr.token);
     }
 
-    fn visit_assignment(&mut self, expr: &Assignent) {
+    fn visit_assignment(&mut self, expr: &Assignment) {
         self.resolve_expression(expr.value.as_ref());
         self.resolve_local(&expr.token);
     }

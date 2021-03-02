@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Assignent, Binary, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
+use crate::{ast::{Assignment, Binary, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -553,7 +553,7 @@ impl Parser {
                 match &expr {
                     Expr::Variable(v) => {
                         let name = v.token.clone();
-                        return Ok(Expr::Assignent(Assignent {token: name, value: Box::new(value)}));
+                        return Ok(Expr::Assignment(Assignment {token: name, value: Box::new(value)}));
                     },
                     _ => {}
                 };
