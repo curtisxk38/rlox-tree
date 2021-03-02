@@ -8,17 +8,19 @@ pub(crate) struct Scanner {
     pub tokens: Vec<Token>,
     start: usize,
     current: usize,
-    line: i32
+    line: i32,
+    next_id: u32,
 }
 
 impl<'c> Scanner {
     pub fn new() -> Scanner {
-        Scanner { tokens: Vec::<Token>::new(), start: 0, current: 0, line: 1 }
+        Scanner { tokens: Vec::<Token>::new(), start: 0, current: 0, line: 1, next_id: 0 }
     }
 
     pub fn scan(&mut self, source: &'c String) -> Result<(), LoxError> {
         // needed since scan can be called more than once for a given Scanner
         //  if the interpreter is running as a REPL
+        // however we purposefully do not re-set next_id since IDs should be unique for ever token
         self.tokens = Vec::new(); 
         self.start = 0;
         self.current = 0;
@@ -33,7 +35,7 @@ impl<'c> Scanner {
             self.scan_token(&mut chars, source)?;
             self.start = self.current;
         }
-        self.tokens.push(Token {lexeme: "".to_owned(), line: self.line, literal: None, token_type: TokenType::EOF});
+        self.add_token(TokenType::EOF, "".to_owned(), None);
         Ok(())
     }
 
@@ -121,8 +123,13 @@ impl<'c> Scanner {
 
     fn add_simple_token(&mut self, token_type: TokenType, source: &'c String) {
         let lexeme = &source[self.start..self.current];
-        let token = Token {token_type: token_type, lexeme: lexeme.to_owned(), literal: None, line: self.line};
-        self.tokens.push(token);
+        self.add_token(token_type, lexeme.to_owned(), None);
+    }
+
+    fn add_token(&mut self, token_type: TokenType, lexeme: String, literal: Option<LiteralValue>) {
+        let t = Token {token_type, lexeme, literal, line: self.line, id: self.next_id};
+        self.next_id += 1;
+        self.tokens.push(t);
     }
 
     fn scan_string(&mut self, chars: &mut Peekable<Chars<'_>>, source: &'c String) -> Result<(), LoxError> {
@@ -147,8 +154,7 @@ impl<'c> Scanner {
         // the lexeme includes the literal ", but we don't want the String to include this
         //  so we don't include the first and last chars of the lexeme
         let literal = String::from(&source[self.start+1..self.current-1]);
-        self.tokens.push( Token { token_type: TokenType::String, line: self.line,
-             lexeme: lexeme.to_owned(), literal: Some(LiteralValue::StringValue(literal))});
+        self.add_token(TokenType::String, lexeme.to_owned(), Some(LiteralValue::StringValue(literal)));
         Ok(())
     }
 
@@ -199,7 +205,7 @@ impl<'c> Scanner {
         let number_conversion = lexeme.parse::<f64>();
         if let Ok(number) = number_conversion {
             let literal = Some(LiteralValue::NumberValue(number));
-            self.tokens.push( Token { token_type: TokenType::Number, line: self.line, lexeme: lexeme.to_owned(), literal: literal});
+            self.add_token(TokenType::Number, lexeme.to_owned(), literal);
             Ok(())
         } else {
             Err(LoxError { kind: LoxErrorKind::ScannerError, message: "unable to parse float"})
@@ -244,7 +250,7 @@ impl<'c> Scanner {
             TokenType::Nil => Some(LiteralValue::NilValue),
             _ => None
         };
-        self.tokens.push(Token {token_type: token_type, line: self.line, lexeme: lexeme.to_owned(), literal: literal});
+        self.add_token(token_type, lexeme.to_owned(), literal);
         Ok(())
     }
 }

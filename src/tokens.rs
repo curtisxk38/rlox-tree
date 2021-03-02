@@ -25,7 +25,8 @@ pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
     pub literal: Option<LiteralValue>,
-    pub line: i32
+    pub line: i32,
+    pub id: u32, // used for resolving names
 }
 
 #[derive(Debug, Clone)]
