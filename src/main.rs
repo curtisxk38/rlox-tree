@@ -6,6 +6,7 @@ use std::process;
 use error::LoxError;
 use io::Write;
 use resolver::Resolver;
+use scan::Scanner;
 use tree_walker::TreeWalker;
 
 mod scan;
@@ -22,12 +23,13 @@ mod resolver;
 struct Interpreter {
     had_error: bool,
     tree_walker: tree_walker::TreeWalker,
+    scanner: scan::Scanner,
 }
 
 impl  Interpreter {
 
     pub fn new() -> Interpreter {
-        return Interpreter { had_error: false, tree_walker: TreeWalker::new() };
+        return Interpreter { had_error: false, tree_walker: TreeWalker::new(), scanner: Scanner::new() };
     }
 
     fn run_file(&mut self, filename: &String) {
@@ -63,11 +65,10 @@ impl  Interpreter {
     }
 
     fn run<'b>(&mut self, input: &'b String) {
-        let mut scanner = scan::Scanner::new(&input);
-        match scanner.scan() {
+        match self.scanner.scan(&input) {
             Ok(_) => {
                 let mut parser = parse::Parser::new();
-                let parsed = parser.parse(&scanner.tokens);
+                let parsed = parser.parse(&self.scanner.tokens);
                 match parsed {
                     Ok(statements) => {
 
@@ -148,8 +149,8 @@ macro_rules! program_tests {
             let mut interpreter = TreeWalker::new_from_outputter(outputter);
             
             // standard interpreter run
-            let mut scanner = scan::Scanner::new(&contents);
-            scanner.scan().expect("scan error");
+            let mut scanner = scan::Scanner::new();
+            scanner.scan(&contents).expect("scan error");
             let mut parser = parse::Parser::new();
             let statements = parser.parse(&scanner.tokens).expect("parse errors");
             let mut resolver = Resolver::new(&interpreter);

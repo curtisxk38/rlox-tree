@@ -4,63 +4,68 @@ use std::str::Chars;
 use crate::{error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token}};
 use crate::tokens::TokenType;
 
-pub(crate) struct Scanner<'c> {
-    source: &'c String,
+pub(crate) struct Scanner {
     pub tokens: Vec<Token>,
     start: usize,
     current: usize,
     line: i32
 }
 
-impl<'c> Scanner<'c> {
-    pub fn new(source: &'c String) -> Scanner<'c> {
-        Scanner { source: source, tokens: Vec::<Token>::new(),
-        start: 0, current: 0, line: 1 }
+impl<'c> Scanner {
+    pub fn new() -> Scanner {
+        Scanner { tokens: Vec::<Token>::new(), start: 0, current: 0, line: 1 }
     }
 
-    pub fn scan(&mut self) -> Result<(), LoxError> {
-        let mut chars = self.source.chars().peekable();
+    pub fn scan(&mut self, source: &'c String) -> Result<(), LoxError> {
+        // needed since scan can be called more than once for a given Scanner
+        //  if the interpreter is running as a REPL
+        self.tokens = Vec::new(); 
+        self.start = 0;
+        self.current = 0;
+        self.line = 1;
+
+        let mut chars = source.chars().peekable();
         
         loop {
             if chars.peek().is_none() {
                 break;
             }
-            self.scan_token(&mut chars)?;
+            self.scan_token(&mut chars, source)?;
             self.start = self.current;
         }
         self.tokens.push(Token {lexeme: "".to_owned(), line: self.line, literal: None, token_type: TokenType::EOF});
         Ok(())
     }
 
-    fn scan_token(&mut self, chars: &mut Peekable<Chars<'_>>) -> Result<(), LoxError> {
+    fn scan_token(&mut self, chars: &mut Peekable<Chars<'_>>, source: &'c String) -> Result<(), LoxError> {
         // we can unwrap here, since we peeked before this and know that the result is Some not None
         let s = self.advance(chars).unwrap();
         match s {
-            '(' => self.add_simple_token(TokenType::LeftParen),
-            ')' => self.add_simple_token(TokenType::RightParen),
-            '{' => self.add_simple_token(TokenType::LeftBrace),
-            '}' => self.add_simple_token(TokenType::RightBrace),
-            ',' => self.add_simple_token(TokenType::Comma),
-            '.' => self.add_simple_token(TokenType::Dot),
-            '-' => self.add_simple_token(TokenType::Minus),
-            '+' => self.add_simple_token(TokenType::Plus),
-            ';' => self.add_simple_token(TokenType::Semicolon),
-            '*' => self.add_simple_token(TokenType::Star),
+            '(' => self.add_simple_token(TokenType::LeftParen, source),
+            ')' => self.add_simple_token(TokenType::RightParen, source),
+            '{' => self.add_simple_token(TokenType::LeftBrace, source),
+            '}' => self.add_simple_token(TokenType::RightBrace, source),
+            ',' => self.add_simple_token(TokenType::Comma, source),
+            '.' => self.add_simple_token(TokenType::Dot, source),
+            '-' => self.add_simple_token(TokenType::Minus, source),
+            '+' => self.add_simple_token(TokenType::Plus, source),
+            ';' => self.add_simple_token(TokenType::Semicolon, source),
+            '*' => self.add_simple_token(TokenType::Star, source),
             '!' => {
                 let tt = if self.match_next('=', chars) { TokenType::BangEqual } else { TokenType::Bang };
-                self.add_simple_token(tt);
+                self.add_simple_token(tt, source);
             },
             '=' => {
                 let tt = if self.match_next('=', chars) { TokenType::EqualEqual } else { TokenType::Equal };
-                self.add_simple_token(tt);
+                self.add_simple_token(tt, source);
             },
             '<' => {
                 let tt = if self.match_next('=', chars) { TokenType::LessEqual } else { TokenType::Less };
-                self.add_simple_token(tt)
+                self.add_simple_token(tt, source)
             },
             '>' => {
                 let tt = if self.match_next('=', chars) { TokenType::GreaterEqual } else { TokenType::Greater };
-                self.add_simple_token(tt);
+                self.add_simple_token(tt, source);
             },
             '/' => {
                 if self.match_next('/', chars) {
@@ -75,7 +80,7 @@ impl<'c> Scanner<'c> {
                         }
                     }
                 } else {
-                    self.add_simple_token(TokenType::Slash);
+                    self.add_simple_token(TokenType::Slash, source);
                 }
             },
             ' ' | '\t' | '\r' => {},
@@ -83,14 +88,14 @@ impl<'c> Scanner<'c> {
                 self.line += 1;
             },
             '"' => {
-                return self.scan_string(chars);
+                return self.scan_string(chars, source);
             }
             '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
-                return self.scan_number(chars)
+                return self.scan_number(chars, source)
             }
             _ => {
                 if s.is_alphabetic() {
-                    return self.scan_alphabetic(chars)
+                    return self.scan_alphabetic(chars, source)
                 } else {
                     return Err(LoxError { kind: crate::error::LoxErrorKind::ScannerError, message: "unexpected character" })
                 }
@@ -114,13 +119,13 @@ impl<'c> Scanner<'c> {
         return false;
     }
 
-    fn add_simple_token(&mut self, token_type: TokenType) {
-        let lexeme = &self.source[self.start..self.current];
+    fn add_simple_token(&mut self, token_type: TokenType, source: &'c String) {
+        let lexeme = &source[self.start..self.current];
         let token = Token {token_type: token_type, lexeme: lexeme.to_owned(), literal: None, line: self.line};
         self.tokens.push(token);
     }
 
-    fn scan_string(&mut self, chars: &mut Peekable<Chars<'_>>) -> Result<(), LoxError> {
+    fn scan_string(&mut self, chars: &mut Peekable<Chars<'_>>, source: &'c String) -> Result<(), LoxError> {
         loop {
             match self.advance(chars) {
                 Some(char) => {
@@ -138,16 +143,16 @@ impl<'c> Scanner<'c> {
                 }
             }
         }
-        let lexeme = &self.source[self.start..self.current];
+        let lexeme = &source[self.start..self.current];
         // the lexeme includes the literal ", but we don't want the String to include this
         //  so we don't include the first and last chars of the lexeme
-        let literal = String::from(&self.source[self.start+1..self.current-1]);
+        let literal = String::from(&source[self.start+1..self.current-1]);
         self.tokens.push( Token { token_type: TokenType::String, line: self.line,
              lexeme: lexeme.to_owned(), literal: Some(LiteralValue::StringValue(literal))});
         Ok(())
     }
 
-    fn scan_number(&mut self, chars: &mut Peekable<Chars<'_>>) -> Result<(), LoxError> {
+    fn scan_number(&mut self, chars: &mut Peekable<Chars<'_>>, source: &'c String) -> Result<(), LoxError> {
         loop {
             if let Some(next) = chars.peek() {
                 match next {
@@ -190,7 +195,7 @@ impl<'c> Scanner<'c> {
             }
         }
 
-        let lexeme = &self.source[self.start..self.current];
+        let lexeme = &source[self.start..self.current];
         let number_conversion = lexeme.parse::<f64>();
         if let Ok(number) = number_conversion {
             let literal = Some(LiteralValue::NumberValue(number));
@@ -201,7 +206,7 @@ impl<'c> Scanner<'c> {
         }
     }
 
-    fn scan_alphabetic(&mut self, chars: &mut Peekable<Chars<'_>>) -> Result<(), LoxError> {
+    fn scan_alphabetic(&mut self, chars: &mut Peekable<Chars<'_>>, source: &'c String) -> Result<(), LoxError> {
         loop {
             if let Some(possible_alphabetic) = chars.peek() {
                 if possible_alphabetic.is_alphabetic() {
@@ -213,7 +218,7 @@ impl<'c> Scanner<'c> {
                 break;
             }
         };
-        let lexeme = &self.source[self.start..self.current];
+        let lexeme = &source[self.start..self.current];
         let token_type = match lexeme {
             "and" => TokenType::And,
             "class" => TokenType::Class,
