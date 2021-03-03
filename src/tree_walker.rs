@@ -1,6 +1,6 @@
-use std::{cell::RefCell, collections::HashMap, fmt::{Display}, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt::{Display}, rc::Rc, usize};
 
-use crate::{ast::{Assignment, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, callable::LoxCallable, error::{LoxError, LoxErrorKind}, native::ClockCallable, tokens::LiteralValue};
+use crate::{ast::{Assignment, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, callable::LoxCallable, error::{LoxError, LoxErrorKind}, native::ClockCallable, tokens::{LiteralValue, Token}};
 
 use crate::callable::Function;
 
@@ -13,6 +13,7 @@ use crate::output::Printer as Outputter;
 pub(crate) struct TreeWalker {
     pub environment: Rc<RefCell<Environment>>,
     pub outputter: Outputter,
+    pub locals: HashMap<u32, usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -107,7 +108,11 @@ impl TreeWalker {
     pub fn new_from_outputter(outputter: Outputter) -> TreeWalker {
         let environment = Rc::new(RefCell::new(Environment::new()));
         environment.borrow_mut().define("clock", Value::Callable(Box::new(ClockCallable{})));
-        TreeWalker { environment, outputter }
+        TreeWalker { environment, outputter, locals: HashMap::new() }
+    }
+
+    pub fn resolve(&mut self, token: &Token, depth: usize) {
+        self.locals.insert(token.id, depth);
     }
     
     pub fn visit_statement<'b>(&mut self, stmt: &'b Statement) -> Result<(), LoxError> {

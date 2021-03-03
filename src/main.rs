@@ -72,7 +72,7 @@ impl  Interpreter {
                 match parsed {
                     Ok(statements) => {
 
-                        let mut resolver = Resolver::new(&self.tree_walker);
+                        let mut resolver = Resolver::new(&mut self.tree_walker);
                         resolver.resolve(&statements);
                         if resolver.errors.len() > 0 {
                             for error in resolver.errors {
@@ -153,7 +153,7 @@ macro_rules! program_tests {
             scanner.scan(&contents).expect("scan error");
             let mut parser = parse::Parser::new();
             let statements = parser.parse(&scanner.tokens).expect("parse errors");
-            let mut resolver = Resolver::new(&interpreter);
+            let mut resolver = Resolver::new(&mut interpreter);
             resolver.resolve(&statements);
             if resolver.errors.len() > 0 {
                panic!("error resolving")

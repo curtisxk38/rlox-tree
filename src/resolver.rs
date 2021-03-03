@@ -76,8 +76,7 @@ impl<'i> Resolver<'i> {
     fn resolve_local(&mut self, token: &Token) {
         for (index, scope) in self.scopes.iter().rev().enumerate() {
             if scope.contains_key(&token.lexeme) {
-                // resolve
-                todo!();
+                self.interpreter.resolve(token, index);
                 break;
             }
         }
