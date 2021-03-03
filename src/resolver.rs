@@ -9,18 +9,20 @@ pub struct Resolver<'i>{
     //  whether or not we have finished resolving that variable’s initializer.
     scopes: Vec<HashMap<String, bool>>,
     pub(crate) errors: Vec<LoxError>,
-    interpreter: &'i TreeWalker
+    interpreter: &'i mut TreeWalker
 }
 
 impl<'i> Resolver<'i> {
-    pub(crate) fn new(interpreter: &'i TreeWalker) -> Resolver<'i> {
+    pub(crate) fn new(interpreter: &'i mut TreeWalker) -> Resolver<'i> {
         Resolver {scopes: Vec::new(), errors: Vec::new(), interpreter }
     }
 
     pub(crate) fn resolve(&mut self, statements: &Vec<Statement>) {
+        self.begin_scope();
         for stmt in statements {
             self.resolve_statement(stmt);
         }
+        self.end_scope();
     }
 
     // helpers
@@ -71,8 +73,8 @@ impl<'i> Resolver<'i> {
         }
     }
 
-    fn resolve_local(&self, token: &Token) {
-        for scope in self.scopes.iter().rev() {
+    fn resolve_local(&mut self, token: &Token) {
+        for (index, scope) in self.scopes.iter().rev().enumerate() {
             if scope.contains_key(&token.lexeme) {
                 // resolve
                 todo!();
@@ -88,6 +90,7 @@ impl<'i> Resolver<'i> {
             self.define(&param.lexeme);
         }
         self.visit_block_statement(&stmt.body);
+        self.end_scope();
     }
 
     // AST nodes that need resolving
