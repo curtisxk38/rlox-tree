@@ -18,11 +18,9 @@ impl<'i> Resolver<'i> {
     }
 
     pub(crate) fn resolve(&mut self, statements: &Vec<Statement>) {
-        self.begin_scope();
         for stmt in statements {
             self.resolve_statement(stmt);
         }
-        self.end_scope();
     }
 
     // helpers
