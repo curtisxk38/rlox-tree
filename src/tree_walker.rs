@@ -50,7 +50,7 @@ impl Environment {
                         parent.borrow().get(name)
                     }
                     None => {
-                        Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
+                        Err(LoxError {kind: LoxErrorKind::NameError, message: "Tried to get a name that is not defined"})
                     }
                 }   
             }
@@ -87,7 +87,7 @@ impl Environment {
                     parent.borrow_mut().assign(name, value)
                 },
                 None => {
-                    Err(LoxError {kind: LoxErrorKind::NameError, message: "name is not defined"})
+                    Err(LoxError {kind: LoxErrorKind::NameError, message: "Tried to assign to a name that is not defined"})
                 }
             }
         } 
