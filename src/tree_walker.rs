@@ -92,6 +92,13 @@ impl Environment {
             }
         } 
     }
+
+    fn assign_at<'b>(&mut self, depth: usize, name: &'b str, value: &Value) {
+        if depth == 0 {
+            self.values.insert(name.to_string(), value.clone());
+        }
+        self.ancestor(depth - 1).borrow_mut().values.insert(name.to_string(), value.clone());
+    }
 }
 
 impl Display for Environment {
@@ -384,7 +391,15 @@ impl TreeWalker {
 
     fn visit_assignment(&mut self, expr: &Assignment) -> Result<Value, LoxError> {
         let value = self.visit_expr(expr.value.as_ref())?;
-        self.assign(&expr.token.lexeme, value)
+        match self.locals.get(&expr.token.id) {
+            Some(depth) => {
+                self.environment.borrow_mut().assign_at(*depth, &expr.token.lexeme, &value);
+            }
+            None => {
+                self.globals.borrow_mut().assign(&expr.token.lexeme, &value)?;
+            }
+        };
+        Ok(value)
     }
 
     fn visit_logical(&mut self, expr: &Logical) -> Result<Value, LoxError> {
