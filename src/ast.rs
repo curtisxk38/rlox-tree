@@ -142,7 +142,7 @@ pub(crate) struct WhileStatement {
 pub(crate) struct FunDeclStatement {
     pub name: Token,
     pub parameters: Vec<Token>,
-    pub body: BlockStatement
+    pub body: Vec<Statement>,
 }
 
 #[derive(Debug, Clone)]

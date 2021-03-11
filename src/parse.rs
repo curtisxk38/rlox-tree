@@ -186,7 +186,7 @@ impl Parser {
                 let body;
                 match &tokens.peek().unwrap().token_type {
                     TokenType::LeftBrace => {
-                        body = self.block_statement(tokens)?;
+                        body = self.block(tokens)?;
                     },
                     _ => {
                         let message = match kind {
@@ -291,8 +291,14 @@ impl Parser {
         Ok(Statement::PrintStatement(PrintStatement {token, value}))
     }
 
-    // blockStatement -> "{" declaration* "}" ;
+    // blockStatement -> block ;
     fn block_statement(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<BlockStatement, LoxError> {
+        let statements = self.block(tokens)?;
+        Ok(BlockStatement {statements})
+    }
+    
+    // block -> "{" declaration* "}" ;
+    fn block(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Vec<Statement>, LoxError> {
         tokens.next(); // consume "{"
         let mut statements = Vec::new();
         loop {
@@ -309,9 +315,8 @@ impl Parser {
                 }
             }
         };
-        Ok(BlockStatement {statements})
+        Ok(statements)
     }
-    
 
     // ifStatement -> "if" "(" expression ")" statement ("else" statement)? ;
     fn if_statement(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {

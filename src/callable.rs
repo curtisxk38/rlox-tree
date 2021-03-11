@@ -55,7 +55,7 @@ impl LoxCallable for Function {
             env.define(&parameter.lexeme, arg)
         }
 
-        let result = interpreter.execute_block(&self.declaration.body.statements, Rc::new(RefCell::new(env)));
+        let result = interpreter.execute_block(&self.declaration.body, Rc::new(RefCell::new(env)));
         match result {
             Ok(_) => {
                 Ok(Value::NilValue)

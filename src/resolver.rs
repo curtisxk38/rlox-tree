@@ -86,7 +86,9 @@ impl<'i> Resolver<'i> {
             self.declare(&param.lexeme);
             self.define(&param.lexeme);
         }
-        self.visit_block_statement(&stmt.body);
+        for stmt in &stmt.body {
+            self.resolve_statement(stmt);
+        }
         self.end_scope();
     }
 
