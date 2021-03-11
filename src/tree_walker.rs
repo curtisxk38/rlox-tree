@@ -12,6 +12,7 @@ use crate::output::Printer as Outputter;
 #[derive(Debug)]
 pub(crate) struct TreeWalker {
     pub environment: Rc<RefCell<Environment>>,
+    pub globals: Rc<RefCell<Environment>>,
     pub outputter: Outputter,
     pub locals: HashMap<u32, usize>,
 }
@@ -54,6 +55,26 @@ impl Environment {
                 }   
             }
         }
+    }
+
+    fn get_at<'b>(&self, name: &'b str, depth: usize) -> Result<Value, LoxError> {
+        if depth == 0 {
+            return self.get(name);
+        }
+        return self.ancestor(depth - 1).borrow().get(name);
+    }
+
+    fn ancestor(&self, depth_from_self: usize) -> Rc<RefCell<Environment>> {
+        let mut environment = Rc::clone(self.parent.as_ref().unwrap());
+        let mut current_depth = 0;
+        while current_depth < depth_from_self {
+            // unwrap is valid here because we're assuming that
+            // the resolver has no bugs, so we wouldn't be asked to get some bogus ancestor
+            let ancestor = Rc::clone(environment.borrow().parent.as_ref().unwrap());
+            environment = ancestor;
+            current_depth += 1;
+        }
+        environment
     }
 
     fn assign<'b>(&mut self, name: &'b str, value: &Value) -> Result<(), LoxError> {
@@ -107,12 +128,24 @@ impl TreeWalker {
 
     pub fn new_from_outputter(outputter: Outputter) -> TreeWalker {
         let environment = Rc::new(RefCell::new(Environment::new()));
-        environment.borrow_mut().define("clock", Value::Callable(Box::new(ClockCallable{})));
-        TreeWalker { environment, outputter, locals: HashMap::new() }
+        let globals = Rc::clone(&environment);
+        globals.borrow_mut().define("clock", Value::Callable(Box::new(ClockCallable{})));
+        TreeWalker { environment, outputter, locals: HashMap::new(), globals }
     }
 
     pub fn resolve(&mut self, token: &Token, depth: usize) {
         self.locals.insert(token.id, depth);
+    }
+
+    fn look_up_variable(&self, token: &Token) -> Result<Value, LoxError> {
+        match self.locals.get(&token.id) {
+            Some(depth) => {
+                self.environment.borrow().get_at(&token.lexeme, *depth)
+            }
+            None => {
+                self.globals.borrow().get(&token.lexeme)
+            }
+        }
     }
     
     pub fn visit_statement<'b>(&mut self, stmt: &'b Statement) -> Result<(), LoxError> {
@@ -346,7 +379,7 @@ impl TreeWalker {
     }
 
     fn visit_variable(&self, expr: &Variable) -> Result<Value, LoxError> {
-        self.get(&expr.token.lexeme)
+        self.look_up_variable(&expr.token)
     }
 
     fn visit_assignment(&mut self, expr: &Assignment) -> Result<Value, LoxError> {
