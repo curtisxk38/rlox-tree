@@ -461,17 +461,6 @@ impl TreeWalker {
         self.environment.borrow_mut().define(name, value)
     }
 
-    fn get<'b>(&self, name: &'b str) -> Result<Value, LoxError> {
-        self.environment.borrow().get(name)
-    }
-
-    fn assign<'b>(&mut self, name: &'b str, value: Value) -> Result<Value, LoxError> {
-        match self.environment.borrow_mut().assign(name, &value) {
-            Ok(_) => Ok(value),
-            Err(e) => Err(e)
-        }
-    }
-
     fn is_equal(&self, left: &Value, right: &Value) -> bool {
         match (left, right) {
             (Value::NumberValue(l), Value::NumberValue(r)) => {
