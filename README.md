@@ -1,5 +1,80 @@
 ## rlox-tree
 A tree-walking interpreter for the language Lox described in [crafting interpreters](https://www.craftinginterpreters.com/).
 
-### Tests
+## Running
+
+To run in REPL mode:
+`cargo run`
+
+To run a script:
+`cargo run tests/basic_operation.lox`
+
+## Tests
 Test programs are located in the `tests/` directory. Each program begins with a block of comments. the content of these comments are what the program should print when it is run.
+
+## Features
+
+Basic expressions:
+```
+Welcome to Lox REPL!
+> print "Hello" + " " + "World!";
+Hello World!
+> print 5 * 4 / (3 + 2);
+4
+> print 6 > 7 or true;
+true
+```
+
+Functions:
+```
+fun square(x) {
+    return x * x;
+}
+
+print square(3); // prints 9
+print square(6); // prints 36
+```
+
+Closures:
+```
+fun makeCounter() {
+  var i = 0;
+  fun count() {
+    i = i + 1;
+    print i;
+  }
+
+  return count;
+}
+
+var counter = makeCounter();
+counter(); // prints 1
+counter(); // prints 2
+```
+
+Native Functions:
+```
+> var earlier = clock(); // clock() gets time since unix epoch in seconds
+> var later = clock();
+> print later;
+1616110221
+> print later - earlier;
+6
+```
+
+Static scoping:
+```
+var a = "global";
+{
+  fun showA() {
+    print a;
+  }
+
+  showA(); // prints "global"
+  var a = "block";
+  showA(); // prints "global"
+}
+```
+
+### To-do
+Classes and inheritance
