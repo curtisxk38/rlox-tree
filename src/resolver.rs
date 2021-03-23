@@ -61,6 +61,10 @@ impl<'i> Resolver<'i> {
 
     fn declare(&mut self, name: &String) {
         if let Some(scope) = self.scopes.last_mut()  {
+            if scope.contains_key(name) {
+                self.errors.push(LoxError {kind: crate::error::LoxErrorKind::ResolvingError,
+                    message: "Variable with this name already exists in this scope"});
+            }
             scope.insert(name.to_owned(), false);
         }
     }
