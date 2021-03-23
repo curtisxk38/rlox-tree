@@ -101,6 +101,7 @@ pub(crate) enum Statement {
     WhileStatement(WhileStatement),
     FunDeclStatement(FunDeclStatement),
     ReturnStatement(ReturnStatement),
+    ClassDeclStatement(ClassDeclStatement),
 }
 
 #[derive(Debug, Clone)]
@@ -149,4 +150,10 @@ pub(crate) struct FunDeclStatement {
 pub(crate) struct ReturnStatement {
     pub keyword: Token,
     pub value: Option<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ClassDeclStatement {
+    pub name: Token,
+    pub methods: Vec<FunDeclStatement>,
 }

@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Assignment, Binary, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
+use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -104,9 +104,12 @@ impl Parser {
         }
     }
 
-    // declaration -> funDecl | varDecl | statement ;
+    // declaration -> classDecl | funDecl | varDecl | statement ;
     fn declaration(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
         match &tokens.peek().unwrap().token_type {
+            TokenType::Class => {
+                self.class_declaration(tokens)
+            },
             TokenType::Var => {
                 self.var_declaration(tokens)
             },
@@ -117,14 +120,48 @@ impl Parser {
         }
     }
 
+    // classDecl -> "class" IDENTIFIER "{" function* "}" ;
+    // Unlike function declarations, methods don’t have a leading fun keyword
+    fn class_declaration(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
+        tokens.next(); // consume 'class'
+        let name;
+        match &tokens.peek().unwrap().token_type {
+            TokenType::Identifier => name = tokens.next().unwrap().to_owned(),
+            _ => {
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "Expected class name"})
+            }
+        };
+        match &tokens.peek().unwrap().token_type {
+            TokenType::LeftBrace => tokens.next(), // consume '{'
+            _ => {
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "Expected { after class declaration"})
+            }
+        };
+        let mut methods = Vec::new();
+        loop {
+            match &tokens.peek().unwrap().token_type {
+                TokenType::RightBrace => {
+                    tokens.next(); // consume '}'
+                    break;
+                },
+                TokenType::EOF => {
+                    return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "reached EOF while parsing, expected '}'"})
+                }
+                _ => {}
+            };
+            methods.push(self.function(tokens, FunctionKind::Method)?);
+        };
+        Ok(Statement::ClassDeclStatement(ClassDeclStatement {name, methods}))
+    }
+
     // funDecl -> "fun" function ;
     fn fun_declaration(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
         tokens.next(); // consume 'fun'
-        self.function(tokens, FunctionKind::Function)
+        Ok(Statement::FunDeclStatement(self.function(tokens, FunctionKind::Function)?))
     }
 
     // function -> IDENTIFIER "(" parameters? ")" blockStatement ;
-    fn function(&mut self, tokens: &mut Peekable<Iter<Token>>, kind: FunctionKind) -> Result<Statement, LoxError> {
+    fn function(&mut self, tokens: &mut Peekable<Iter<Token>>, kind: FunctionKind) -> Result<FunDeclStatement, LoxError> {
         let name;
         match &tokens.peek().unwrap().token_type {
             TokenType::Identifier => name = tokens.next().unwrap().to_owned(),
@@ -198,7 +235,7 @@ impl Parser {
                 };
 
 
-                Ok(Statement::FunDeclStatement(FunDeclStatement {name, body, parameters}))
+                Ok(FunDeclStatement {name, body, parameters})
             },
             _ => {
                 let message = match kind {
