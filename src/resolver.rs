@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ast::{Assignment, Binary, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, Grouping, IfStatement, Logical, PrintStatement, ReturnStatement, Statement, Unary, VarDeclStatement, Variable, WhileStatement}, error::LoxError, tokens::Token, tree_walker::TreeWalker};
+use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Grouping, IfStatement, Logical, PrintStatement, ReturnStatement, Statement, Unary, VarDeclStatement, Variable, WhileStatement}, error::LoxError, tokens::Token, tree_walker::TreeWalker};
 
 #[derive(Clone)]
 enum FunctionType {
@@ -48,6 +48,7 @@ impl<'i> Resolver<'i> {
             Statement::WhileStatement(stmt) => { self.visit_while_statement(stmt) }
             Statement::FunDeclStatement(stmt) => { self.visit_fun_decl_statement(stmt) }
             Statement::ReturnStatement(stmt) => { self.visit_return_statement(stmt) }
+            Statement::ClassDeclStatement(stmt) => { self.visit_class_decl_statement(stmt) }
         }
     }
 
@@ -182,6 +183,12 @@ impl<'i> Resolver<'i> {
     fn visit_while_statement(&mut self, stmt: &WhileStatement) {
         self.resolve_expression(&stmt.condition);
         self.resolve_statement(stmt.body.as_ref());
+    }
+
+    fn visit_class_decl_statement(&mut self, stmt: &ClassDeclStatement) {
+        self.declare(&stmt.name.lexeme);
+        self.define(&stmt.name.lexeme);
+        // TODO resolve methods themselves?
     }
 
     fn visit_binary(&mut self, expr: &Binary) {
