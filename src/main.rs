@@ -19,6 +19,7 @@ mod callable;
 mod output;
 mod native;
 mod resolver;
+mod class;
 
 struct Interpreter {
     had_error: bool,
@@ -26,7 +27,7 @@ struct Interpreter {
     scanner: scan::Scanner,
 }
 
-impl  Interpreter {
+impl Interpreter {
 
     pub fn new() -> Interpreter {
         return Interpreter { had_error: false, tree_walker: TreeWalker::new(), scanner: Scanner::new() };

@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, fmt::{Display}, rc::Rc, usize};
 
-use crate::{ast::{Assignment, Binary, BinaryOperator, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, callable::LoxCallable, error::{LoxError, LoxErrorKind}, native::ClockCallable, tokens::{LiteralValue, Token}};
+use crate::{ast::{Assignment, Binary, BinaryOperator, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, callable::LoxCallable, class::LoxClass, error::{LoxError, LoxErrorKind}, native::ClockCallable, tokens::{LiteralValue, Token}};
 
 use crate::callable::Function;
 
@@ -114,6 +114,7 @@ pub(crate) enum Value {
     BooleanValue(bool),
     NilValue,
     Callable(Box<dyn LoxCallable>),
+    ClassValue(LoxClass),
 }
 
 impl Display for Value {
@@ -124,6 +125,7 @@ impl Display for Value {
             Value::BooleanValue(n) => write!(f, "{}", n),
             Value::NilValue => write!(f, "nil"),
             Value::Callable(c) => write!(f, "{}", c),
+            Value::ClassValue(c) => write!(f, "{}", c),
         }
     }
 }
@@ -180,6 +182,9 @@ impl TreeWalker {
             }
             Statement::ReturnStatement(r) => {
                 self.visit_return_statement(r)
+            }
+            Statement::ClassDeclStatement(c) => {
+                self.visit_class_decl_statement(c)
             }
         }
     }
@@ -250,6 +255,13 @@ impl TreeWalker {
                 Ok(())
             }
         }
+    }
+
+    fn visit_class_decl_statement<'b>(&mut self, stmt: &'b ClassDeclStatement) -> Result<(), LoxError> {
+        let class = LoxClass { name: stmt.name.lexeme.to_owned() };
+        self.define(&stmt.name.lexeme, Value::ClassValue(class));
+
+        Ok(())
     }
 
     fn visit_expr(&mut self, expr: &Expr) -> Result<Value, LoxError> {
@@ -487,6 +499,7 @@ impl TreeWalker {
             Value::NumberValue(_) => true,
             Value::StringValue(_) => true,
             Value::Callable(_) => true,
+            Value::ClassValue(_) => true,
         }
     }
 }
