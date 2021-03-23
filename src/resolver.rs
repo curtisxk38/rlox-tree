@@ -2,19 +2,24 @@ use std::collections::HashMap;
 
 use crate::{ast::{Assignment, Binary, BlockStatement, Call, Expr, ExpressionStatement, FunDeclStatement, Grouping, IfStatement, Logical, PrintStatement, ReturnStatement, Statement, Unary, VarDeclStatement, Variable, WhileStatement}, error::LoxError, tokens::Token, tree_walker::TreeWalker};
 
-
+#[derive(Clone)]
+enum FunctionType {
+    None,
+    Function,
+}
 
 pub struct Resolver<'i>{
     // The value associated with a key in the scope map represents
     //  whether or not we have finished resolving that variable’s initializer.
     scopes: Vec<HashMap<String, bool>>,
     pub(crate) errors: Vec<LoxError>,
-    interpreter: &'i mut TreeWalker
+    interpreter: &'i mut TreeWalker,
+    current_function: FunctionType,
 }
 
 impl<'i> Resolver<'i> {
     pub(crate) fn new(interpreter: &'i mut TreeWalker) -> Resolver<'i> {
-        Resolver {scopes: Vec::new(), errors: Vec::new(), interpreter }
+        Resolver {scopes: Vec::new(), errors: Vec::new(), interpreter, current_function: FunctionType::None }
     }
 
     pub(crate) fn resolve(&mut self, statements: &Vec<Statement>) {
@@ -84,7 +89,10 @@ impl<'i> Resolver<'i> {
         }
     }
 
-    fn resolve_function(&mut self, stmt: &FunDeclStatement) {
+    fn resolve_function(&mut self, stmt: &FunDeclStatement, fun_type: FunctionType) {
+        let enclosing_function = self.current_function.clone();
+        self.current_function = fun_type;
+
         self.begin_scope();
         for param in &stmt.parameters {
             self.declare(&param.lexeme);
@@ -94,6 +102,7 @@ impl<'i> Resolver<'i> {
             self.resolve_statement(stmt);
         }
         self.end_scope();
+        self.current_function = enclosing_function;
     }
 
     // AST nodes that need resolving
@@ -135,7 +144,7 @@ impl<'i> Resolver<'i> {
     fn visit_fun_decl_statement(&mut self, stmt: &FunDeclStatement) {
         self.declare(&stmt.name.lexeme);
         self.define(&stmt.name.lexeme);
-        self.resolve_function(stmt);
+        self.resolve_function(stmt, FunctionType::Function);
     }
 
     // basically just resolve child AST nodes
@@ -157,6 +166,14 @@ impl<'i> Resolver<'i> {
     }
 
     fn visit_return_statement(&mut self, stmt: &ReturnStatement) {
+        match self.current_function {
+            FunctionType::None => {
+                self.errors.push(LoxError {kind: crate::error::LoxErrorKind::ResolvingError,
+                    message: "Can't have a return statement in top level code"});
+            }
+            FunctionType::Function => {}
+        }
+
         if let Some(expr) = &stmt.value {
             self.resolve_expression(expr);
         }
