@@ -180,4 +180,5 @@ program_tests!(
     closure: "tests/closure.lox",
     print_clock: "tests/print_clock.lox",
     scoping: "tests/scoping.lox",
+    class_creation: "tests/class_test.lox",
 );

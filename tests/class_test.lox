@@ -1,0 +1,12 @@
+//<class DevonshireCream>
+//<DevonshireCream instance>
+
+class DevonshireCream {
+  serveOn() {
+    return "Scones";
+  }
+}
+
+print DevonshireCream;
+var instance = DevonshireCream();
+print instance;
