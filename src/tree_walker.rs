@@ -457,7 +457,14 @@ impl TreeWalker {
     }
 
     fn visit_get(&mut self, expr: &Get) -> Result<Value, LoxError> {
-        todo!()
+        match self.visit_expr(expr.object.as_ref())? {
+            Value::InstanceValue(i) => {
+                i.as_ref().borrow().get(&expr.name.lexeme)
+            },
+            _ => {
+                Err(LoxError {kind: LoxErrorKind::AttributeError, message: "only instances have attributes"})
+            }
+        }
     }
 
     pub fn execute_block(&mut self, statements: &Vec<Statement>, env: Rc<RefCell<Environment>>) -> Result<(), LoxError> {

@@ -205,7 +205,7 @@ impl<'i> Resolver<'i> {
     }
 
     fn visit_get(&mut self, expr: &Get) {
-        
+        self.resolve_expression(expr.object.as_ref());
     }
 
     fn visit_grouping(&mut self, expr: &Grouping) {

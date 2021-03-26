@@ -1,6 +1,6 @@
-use std::{cell::RefCell, fmt::Display, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt::Display, rc::Rc};
 
-use crate::{callable::LoxCallable, error::LoxError, tree_walker::{self, Value}};
+use crate::{callable::LoxCallable, error::{LoxError, LoxErrorKind}, tree_walker::{self, Value}};
 
 
 #[derive(Debug, Clone)]
@@ -17,7 +17,7 @@ impl Display for LoxClass {
 
 impl LoxCallable for LoxClass {
     fn call(& self, _interpreter:  &mut tree_walker::TreeWalker, _arguments: Vec<tree_walker::Value>) -> Result<tree_walker::Value, LoxError> {
-        let instance = LoxInstance { class: self.clone() };
+        let instance = LoxInstance::new(self.clone());
         Ok(Value::InstanceValue(Rc::new(RefCell::new(instance))))
     }
 
@@ -28,7 +28,21 @@ impl LoxCallable for LoxClass {
 
 #[derive(Debug, Clone)]
 pub(crate) struct LoxInstance {
-    pub class: LoxClass,
+    class: LoxClass,
+    fields: HashMap<String, Value>,
+}
+
+impl LoxInstance {
+    pub fn new(class: LoxClass) -> LoxInstance {
+        LoxInstance { class, fields: HashMap::new() }
+    }
+
+    pub fn get(&self, name: &str) -> Result<Value, LoxError> {
+        match self.fields.get(name) {
+            Some(v) => { Ok(v.clone() )}
+            None => { Err(LoxError {kind: LoxErrorKind::AttributeError, message: "Instance has no attribute with that name"}) }
+        }
+    }
 }
 
 impl Display for LoxInstance {
