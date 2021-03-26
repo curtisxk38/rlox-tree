@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
+use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Set, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -584,7 +584,7 @@ impl Parser {
         self.assignment(tokens)
     }
 
-    // assignment -> IDENTIFIER "=" assignment | logic_or ;
+    // assignment -> (call ".")? IDENTIFIER "=" assignment | logic_or ;
     fn assignment(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, LoxError> {
         let expr = self.or(tokens)?;
 
@@ -592,11 +592,15 @@ impl Parser {
             TokenType::Equal => {
                 tokens.next().unwrap(); // consume "="
                 let value = self.assignment(tokens)?;
-                match &expr {
+                match expr {
                     Expr::Variable(v) => {
-                        let name = v.token.clone();
-                        return Ok(Expr::Assignment(Assignment {token: name, value: Box::new(value)}));
+                        return Ok(Expr::Assignment(Assignment {token: v.token, value: Box::new(value)}));
                     },
+                    Expr::Get(g) => {
+                        let name = g.name;
+                        let object = g.object;
+                        return Ok(Expr::Set(Set {object, name, value: Box::new(value)}));
+                    }
                     _ => {}
                 };
                 Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "invalid assignment target"})

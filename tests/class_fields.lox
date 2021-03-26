@@ -1,0 +1,10 @@
+//Hello World
+class E {}
+
+var e = E();
+
+e.foo = "Hello";
+
+e.foo = e.foo + " World";
+
+print e.foo;

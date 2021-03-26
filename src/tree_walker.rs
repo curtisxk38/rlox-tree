@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, fmt::{Display}, rc::Rc, usize};
 
-use crate::{ast::{Assignment, Binary, BinaryOperator, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, callable::LoxCallable, class::{LoxClass, LoxInstance}, error::{LoxError, LoxErrorKind}, native::ClockCallable, tokens::{LiteralValue, Token}};
+use crate::{ast::{Assignment, Binary, BinaryOperator, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Set, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, callable::LoxCallable, class::{LoxClass, LoxInstance}, error::{LoxError, LoxErrorKind}, native::ClockCallable, tokens::{LiteralValue, Token}};
 
 use crate::callable::Function;
 
@@ -293,6 +293,9 @@ impl TreeWalker {
             Expr::Get(g) => {
                 self.visit_get(g)
             }
+            Expr::Set(s) => {
+                self.visit_set(s)
+            }
         }
     }
 
@@ -460,6 +463,22 @@ impl TreeWalker {
         match self.visit_expr(expr.object.as_ref())? {
             Value::InstanceValue(i) => {
                 i.as_ref().borrow().get(&expr.name.lexeme)
+            },
+            _ => {
+                Err(LoxError {kind: LoxErrorKind::AttributeError, message: "only instances have attributes"})
+            }
+        }
+    }
+
+    fn visit_set(&mut self, expr: &Set) -> Result<Value, LoxError> {
+        // Evaluate the object.
+        // Raise error if its not an instance
+        // evaluate value
+        match self.visit_expr(expr.object.as_ref())? {
+            Value::InstanceValue(i) => {
+                let value = self.visit_expr(expr.value.as_ref())?;
+                i.as_ref().borrow_mut().set(&expr.name.lexeme, value.clone());
+                Ok(value)
             },
             _ => {
                 Err(LoxError {kind: LoxErrorKind::AttributeError, message: "only instances have attributes"})

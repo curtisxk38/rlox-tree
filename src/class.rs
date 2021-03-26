@@ -43,6 +43,10 @@ impl LoxInstance {
             None => { Err(LoxError {kind: LoxErrorKind::AttributeError, message: "Instance has no attribute with that name"}) }
         }
     }
+
+    pub fn set(&mut self, name: &str, value: Value) {
+        self.fields.insert(name.to_owned(), value);
+    }
 }
 
 impl Display for LoxInstance {

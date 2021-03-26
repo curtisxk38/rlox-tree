@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, Grouping, IfStatement, Logical, PrintStatement, ReturnStatement, Statement, Unary, VarDeclStatement, Variable, WhileStatement}, error::LoxError, tokens::Token, tree_walker::TreeWalker};
+use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, Grouping, IfStatement, Logical, PrintStatement, ReturnStatement, Set, Statement, Unary, VarDeclStatement, Variable, WhileStatement}, error::LoxError, tokens::Token, tree_walker::TreeWalker};
 
 #[derive(Clone)]
 enum FunctionType {
@@ -63,6 +63,7 @@ impl<'i> Resolver<'i> {
             Expr::Logical(l) => { self.visit_logical(l) }
             Expr::Call(c) => { self.visit_call(c) }
             Expr::Get(g) => { self.visit_get(g) }
+            Expr::Set(s) => { self.visit_set(s) }
         }
     }
 
@@ -205,6 +206,11 @@ impl<'i> Resolver<'i> {
     }
 
     fn visit_get(&mut self, expr: &Get) {
+        self.resolve_expression(expr.object.as_ref());
+    }
+
+    fn visit_set(&mut self, expr: &Set) {
+        self.resolve_expression(expr.value.as_ref());
         self.resolve_expression(expr.object.as_ref());
     }
 
