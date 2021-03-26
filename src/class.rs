@@ -16,7 +16,7 @@ impl Display for LoxClass {
 }
 
 impl LoxCallable for LoxClass {
-    fn call(& self, _interpreter:  &mut tree_walker::TreeWalker,_argumentss: Vec<tree_walker::Value>) -> Result<tree_walker::Value, LoxError> {
+    fn call(& self, _interpreter:  &mut tree_walker::TreeWalker, _arguments: Vec<tree_walker::Value>) -> Result<tree_walker::Value, LoxError> {
         let instance = LoxInstance { class: self.clone() };
         Ok(Value::InstanceValue(Rc::new(RefCell::new(instance))))
     }

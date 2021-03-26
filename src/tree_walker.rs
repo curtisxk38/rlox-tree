@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, fmt::{Display}, rc::Rc, usize};
 
-use crate::{ast::{Assignment, Binary, BinaryOperator, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, callable::LoxCallable, class::{LoxClass, LoxInstance}, error::{LoxError, LoxErrorKind}, native::ClockCallable, tokens::{LiteralValue, Token}};
+use crate::{ast::{Assignment, Binary, BinaryOperator, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, callable::LoxCallable, class::{LoxClass, LoxInstance}, error::{LoxError, LoxErrorKind}, native::ClockCallable, tokens::{LiteralValue, Token}};
 
 use crate::callable::Function;
 
@@ -290,6 +290,9 @@ impl TreeWalker {
             Expr::Call(c) => {
                 self.visit_call(c)
             }
+            Expr::Get(g) => {
+                self.visit_get(g)
+            }
         }
     }
 
@@ -451,6 +454,10 @@ impl TreeWalker {
                 Err(LoxError {kind: LoxErrorKind::TypeError, message: "expression is not callable"})
             }
         }
+    }
+
+    fn visit_get(&mut self, expr: &Get) -> Result<Value, LoxError> {
+        todo!()
     }
 
     pub fn execute_block(&mut self, statements: &Vec<Statement>, env: Rc<RefCell<Environment>>) -> Result<(), LoxError> {

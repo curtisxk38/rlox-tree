@@ -796,6 +796,18 @@ impl Parser {
                     };
                     expr = Expr::Call(Call {callee: Box::new(expr), arguments: args, token});
                 },
+                TokenType::Dot => {
+                    tokens.next(); // consume "."
+                    match &tokens.peek().unwrap().token_type {
+                        TokenType::Identifier => {
+                            let name = tokens.next().unwrap().to_owned(); // consume identifier
+                            expr = Expr::Get(Get { object: Box::new(expr), name });
+                        },
+                        _ => {
+                            return Err(LoxError {kind: LoxErrorKind::ScannerError, message: "expected identifier after '.'"})
+                        }
+                    }
+                },
                 _ => {
                     break;
                 }

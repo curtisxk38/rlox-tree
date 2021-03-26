@@ -37,6 +37,7 @@ pub(crate) enum Expr {
     Assignment(Assignment),
     Logical(Logical),
     Call(Call),
+    Get(Get),
 }
 
 #[derive(Debug, Clone)]
@@ -89,6 +90,12 @@ pub(crate) struct Call {
     pub callee: Box<Expr>,
     pub arguments: Vec<Expr>,
     pub token: Token, // token for closing ")" after call
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Get {
+    pub object: Box<Expr>,
+    pub name: Token,
 }
 
 #[derive(Debug, Clone)]
