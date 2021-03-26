@@ -176,6 +176,7 @@ program_tests!(
     basic_function: "tests/basic_function.lox",
     less_fun: "tests/less_fun.lox",
     fun_in_for: "tests/fun_in_for.lox",
+    function_value: "tests/function_value.lox",
     recursive_fib: "tests/recursive_fib.lox",
     closure: "tests/closure.lox",
     print_clock: "tests/print_clock.lox",

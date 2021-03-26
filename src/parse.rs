@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
+use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -766,38 +766,44 @@ impl Parser {
         }
     }
     
-    // call -> primary ( "(" arguments? ")" )* ;
+    // call -> primary ( "(" arguments? ")" |  "." IDENTIFIER )* ;
     fn call(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, LoxError> {
-        let p = self.primary(tokens)?;
-        let mut args = Vec::new();
-        let token;
-        match &tokens.peek().unwrap().token_type {
-            TokenType::LeftParen => {
-                tokens.next(); // consume "("
-                match &tokens.peek().unwrap().token_type {
-                    TokenType::RightParen => {
-                        token = tokens.next().unwrap().to_owned(); // consume ")"
-                    },
-                    _ => {
-                        args = self.arguments(tokens)?;
-                        match &tokens.peek().unwrap().token_type {
-                            TokenType::RightParen => {
-                                token = tokens.next().unwrap().to_owned(); // consume ")"
-                            },
-                            _ => {
-                                return Err(LoxError {kind: LoxErrorKind::ScannerError, message: "expected ')' call"})
+        let mut expr = self.primary(tokens)?;
+        loop {
+            match &tokens.peek().unwrap().token_type {
+                TokenType::LeftParen => {
+                    tokens.next(); // consume "("
+                    // finish call
+                    let mut args = Vec::new();
+                    let token;
+                    match &tokens.peek().unwrap().token_type {
+                        TokenType::RightParen => {
+                            // call has no arguments
+                            token = tokens.next().unwrap().to_owned(); // consume ")"
+                        },
+                        _ => {
+                            // call has arguments
+                            args = self.arguments(tokens)?;
+                            match &tokens.peek().unwrap().token_type {
+                                TokenType::RightParen => {
+                                    token = tokens.next().unwrap().to_owned(); // consume ")"
+                                },
+                                _ => {
+                                    return Err(LoxError {kind: LoxErrorKind::ScannerError, message: "expected ')' call"})
+                                }
                             }
                         }
-                    }
+                    };
+                    expr = Expr::Call(Call {callee: Box::new(expr), arguments: args, token});
+                },
+                _ => {
+                    break;
                 }
-            },
-            _ => {
-                return Ok(p);
-            }
+            };
         };
-        Ok(Expr::Call(Call {callee: Box::new(p), arguments: args, token}))
+        Ok(expr)
     }
-
+    
     // arguments -> expression ( "," expression )* ;
     fn arguments(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Vec<Expr>, LoxError> {
         let mut args: Vec<Expr> = Vec::new();
