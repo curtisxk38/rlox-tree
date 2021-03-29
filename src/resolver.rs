@@ -9,6 +9,12 @@ enum FunctionType {
     Method,
 }
 
+#[derive(Clone)]
+enum ClassType {
+    None,
+    Class,
+}
+
 pub struct Resolver<'i>{
     // The value associated with a key in the scope map represents
     //  whether or not we have finished resolving that variable’s initializer.
@@ -16,11 +22,12 @@ pub struct Resolver<'i>{
     pub(crate) errors: Vec<LoxError>,
     interpreter: &'i mut TreeWalker,
     current_function: FunctionType,
+    current_class: ClassType,
 }
 
 impl<'i> Resolver<'i> {
     pub(crate) fn new(interpreter: &'i mut TreeWalker) -> Resolver<'i> {
-        Resolver {scopes: Vec::new(), errors: Vec::new(), interpreter, current_function: FunctionType::None }
+        Resolver {scopes: Vec::new(), errors: Vec::new(), interpreter, current_function: FunctionType::None, current_class: ClassType::None }
     }
 
     pub(crate) fn resolve(&mut self, statements: &Vec<Statement>) {
@@ -190,6 +197,9 @@ impl<'i> Resolver<'i> {
     }
 
     fn visit_class_decl_statement(&mut self, stmt: &ClassDeclStatement) {
+        let enclosing_class_type = self.current_class.clone();
+        self.current_class = ClassType::Class;
+
         self.declare(&stmt.name.lexeme);
         self.define(&stmt.name.lexeme);
         
@@ -201,6 +211,7 @@ impl<'i> Resolver<'i> {
         }
 
         self.end_scope();
+        self.current_class = enclosing_class_type;
     }
 
     fn visit_binary(&mut self, expr: &Binary) {
@@ -225,7 +236,15 @@ impl<'i> Resolver<'i> {
     }
 
     fn visit_this(&mut self, expr: &This) {
-        self.resolve_local(&expr.keyword)
+        match &self.current_class {
+            ClassType::Class => {
+                self.resolve_local(&expr.keyword)
+            },
+            ClassType::None => {
+                self.errors.push(LoxError {kind: crate::error::LoxErrorKind::ResolvingError,
+                    message: "Can't use this keyword outside of a class"});
+            }
+        }
     }
 
     fn visit_grouping(&mut self, expr: &Grouping) {
