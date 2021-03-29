@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Set, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
+use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Set, Statement, This, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -843,13 +843,17 @@ impl Parser {
         Ok(args)
     }
 
-    // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
+    // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" | "this" ;
     fn primary(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::False | TokenType::True | TokenType::Number | TokenType::String | TokenType::Nil => {
                 let token = tokens.next().unwrap().to_owned();
                 let value = token.literal.clone().unwrap();
                 Ok(Expr::Literal(Literal { token, value }))
+            },
+            TokenType::This => {
+                let keyword = tokens.next().unwrap().to_owned();
+                Ok(Expr::This(This { keyword }))
             },
             TokenType::Identifier => {
                 Ok(Expr::Variable(Variable { token: tokens.next().unwrap().to_owned() }))

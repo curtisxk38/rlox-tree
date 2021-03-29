@@ -39,6 +39,7 @@ pub(crate) enum Expr {
     Call(Call),
     Get(Get),
     Set(Set),
+    This(This),
 }
 
 #[derive(Debug, Clone)]
@@ -104,6 +105,11 @@ pub(crate) struct Set {
     pub object: Box<Expr>,
     pub name: Token,
     pub value: Box<Expr>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct This {
+    pub keyword: Token,
 }
 
 #[derive(Debug, Clone)]

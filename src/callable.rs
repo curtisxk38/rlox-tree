@@ -1,6 +1,6 @@
 use std::{cell::RefCell, fmt::{Debug, Display}, rc::Rc};
 
-use crate::{ast::FunDeclStatement, error::{LoxError, LoxErrorKind}, tree_walker::{Environment, TreeWalker, Value}};
+use crate::{ast::FunDeclStatement, class::LoxInstance, error::{LoxError, LoxErrorKind}, tree_walker::{Environment, TreeWalker, Value}};
 
 pub(crate) trait LoxCallable: Display + Debug + LoxCallableClone {
     fn call(& self, interpreter:  &mut TreeWalker, arguments: Vec<Value>) -> Result<Value, LoxError>;
@@ -34,6 +34,13 @@ pub(crate) struct Function {
 impl Function {
     pub fn new(declaration: FunDeclStatement, closure: Rc<RefCell<Environment>>) -> Function {
         Function { declaration, closure }
+    }
+
+    pub fn bind(&self, instance: &Rc<RefCell<LoxInstance>>) -> Function {
+        let mut environment = Environment::new();
+        environment.parent = Some(Rc::clone(&self.closure));
+        environment.define("this", Value::InstanceValue(Rc::clone(instance)));
+        return Function::new(self.declaration.clone(), Rc::new(RefCell::new(environment)));
     }
 }
 

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, Grouping, IfStatement, Logical, PrintStatement, ReturnStatement, Set, Statement, Unary, VarDeclStatement, Variable, WhileStatement}, error::LoxError, tokens::Token, tree_walker::TreeWalker};
+use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, Grouping, IfStatement, Logical, PrintStatement, ReturnStatement, Set, Statement, This, Unary, VarDeclStatement, Variable, WhileStatement}, error::LoxError, tokens::Token, tree_walker::TreeWalker};
 
 #[derive(Clone)]
 enum FunctionType {
@@ -65,6 +65,7 @@ impl<'i> Resolver<'i> {
             Expr::Call(c) => { self.visit_call(c) }
             Expr::Get(g) => { self.visit_get(g) }
             Expr::Set(s) => { self.visit_set(s) }
+            Expr::This(t) => { self.visit_this(t) }
         }
     }
 
@@ -192,9 +193,14 @@ impl<'i> Resolver<'i> {
         self.declare(&stmt.name.lexeme);
         self.define(&stmt.name.lexeme);
         
+        self.begin_scope();
+        self.scopes.last_mut().unwrap().insert(String::from("this"), true); // we just called begin_scope, so unwrap won't ever panic
+
         for method in &stmt.methods {
             self.resolve_function(method, FunctionType::Method);
         }
+
+        self.end_scope();
     }
 
     fn visit_binary(&mut self, expr: &Binary) {
@@ -216,6 +222,10 @@ impl<'i> Resolver<'i> {
     fn visit_set(&mut self, expr: &Set) {
         self.resolve_expression(expr.value.as_ref());
         self.resolve_expression(expr.object.as_ref());
+    }
+
+    fn visit_this(&mut self, expr: &This) {
+        self.resolve_local(&expr.keyword)
     }
 
     fn visit_grouping(&mut self, expr: &Grouping) {

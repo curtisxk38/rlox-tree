@@ -44,11 +44,11 @@ impl LoxInstance {
         LoxInstance { class, fields: HashMap::new() }
     }
 
-    pub fn get(&self, name: &str) -> Result<Value, LoxError> {
+    pub fn get(&self, name: &str, instance: &Rc<RefCell<LoxInstance>>) -> Result<Value, LoxError> {
         if let Some(value) = self.fields.get(name) {
             Ok(value.clone())
         } else if let Some(method) = self.class.methods.get(name) {
-            Ok(Value::Callable(Box::new(method.clone())))
+            Ok(Value::Callable(Box::new(method.bind(instance))))
         } else {
             Err(LoxError {kind: LoxErrorKind::AttributeError, message: "Instance has no attribute with that name"})
         }

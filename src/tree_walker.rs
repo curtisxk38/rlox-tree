@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, fmt::{Display}, rc::Rc, usize};
 
-use crate::{ast::{Assignment, Binary, BinaryOperator, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Set, Statement, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, callable::LoxCallable, class::{LoxClass, LoxInstance}, error::{LoxError, LoxErrorKind}, native::ClockCallable, tokens::{LiteralValue, Token}};
+use crate::{ast::{Assignment, Binary, BinaryOperator, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Set, Statement, This, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, callable::LoxCallable, class::{LoxClass, LoxInstance}, error::{LoxError, LoxErrorKind}, native::ClockCallable, tokens::{LiteralValue, Token}};
 
 use crate::callable::Function;
 
@@ -302,6 +302,9 @@ impl TreeWalker {
             Expr::Set(s) => {
                 self.visit_set(s)
             }
+            Expr::This(t) => {
+                self.visit_this(t)
+            }
         }
     }
 
@@ -468,7 +471,7 @@ impl TreeWalker {
     fn visit_get(&mut self, expr: &Get) -> Result<Value, LoxError> {
         match self.visit_expr(expr.object.as_ref())? {
             Value::InstanceValue(i) => {
-                i.as_ref().borrow().get(&expr.name.lexeme)
+                i.as_ref().borrow().get(&expr.name.lexeme, &i)
             },
             _ => {
                 Err(LoxError {kind: LoxErrorKind::AttributeError, message: "only instances have attributes"})
@@ -490,6 +493,10 @@ impl TreeWalker {
                 Err(LoxError {kind: LoxErrorKind::AttributeError, message: "only instances have attributes"})
             }
         }
+    }
+
+    fn visit_this(&mut self, expr: &This) -> Result<Value, LoxError> {
+        self.look_up_variable(&expr.keyword)
     }
 
     pub fn execute_block(&mut self, statements: &Vec<Statement>, env: Rc<RefCell<Environment>>) -> Result<(), LoxError> {
