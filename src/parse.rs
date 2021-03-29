@@ -128,13 +128,13 @@ impl Parser {
         match &tokens.peek().unwrap().token_type {
             TokenType::Identifier => name = tokens.next().unwrap().to_owned(),
             _ => {
-                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "Expected class name"})
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "Expected class name"})
             }
         };
         match &tokens.peek().unwrap().token_type {
             TokenType::LeftBrace => tokens.next(), // consume '{'
             _ => {
-                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "Expected { after class declaration"})
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "Expected { after class declaration"})
             }
         };
         let mut methods = Vec::new();
@@ -145,7 +145,7 @@ impl Parser {
                     break;
                 },
                 TokenType::EOF => {
-                    return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "reached EOF while parsing, expected '}'"})
+                    return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "reached EOF while parsing, expected '}'"})
                 }
                 _ => {}
             };
@@ -170,7 +170,7 @@ impl Parser {
                     FunctionKind::Function => { "expected function name"}
                     FunctionKind::Method => { "expected method name" }
                 };
-                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message});
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message});
             }
         };
 
@@ -188,14 +188,14 @@ impl Parser {
                                 // no need to return the Error
                                 // that would mean the parser is in a bad state and needs to synchronize
                                 // but we don't need to do that for this type of error
-                                self.errors.push(LoxError {kind: LoxErrorKind::SyntaxError, message: "can't have > 255 arguments to a function call"})
+                                self.errors.push(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "can't have > 255 arguments to a function call"})
                             }
                             match &tokens.peek().unwrap().token_type {
                                 TokenType::Identifier => {
                                     parameters.push(tokens.next().unwrap().to_owned());
                                 },
                                 _ => {
-                                    return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected identifier"});
+                                    return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "expected identifier"});
                                 }
                             }
 
@@ -216,7 +216,7 @@ impl Parser {
                         tokens.next(); // consume ")"
                     },
                     _ => {
-                        return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ')' after parameters"})
+                        return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "expected ')' after parameters"})
                     }
                 }
 
@@ -230,7 +230,7 @@ impl Parser {
                             FunctionKind::Function => { "expected '{' afer function body"}
                             FunctionKind::Method => { "expected '{' after method body" }
                         };
-                        return Err(LoxError {kind: LoxErrorKind::SyntaxError, message})
+                        return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message})
                     }
                 };
 
@@ -242,7 +242,7 @@ impl Parser {
                     FunctionKind::Function => { "expected '(' afer function name"}
                     FunctionKind::Method => { "expected '(' after method name" }
                 };
-                Err(LoxError {kind: LoxErrorKind::SyntaxError, message})
+                Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message})
             }
         }
     }
@@ -253,7 +253,7 @@ impl Parser {
         match &tokens.peek().unwrap().token_type {
             TokenType::Identifier => token = tokens.next().unwrap().to_owned(),
             _ => {
-                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected identifier"})
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "expected identifier"})
             }
         };
 
@@ -273,7 +273,7 @@ impl Parser {
                 tokens.next(); // consume ";"
             },
             _ => {
-              return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ';' variable declaration"})  
+              return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "expected ';' variable declaration"})  
             }
         };
         Ok(Statement::VarDeclStatement(VarDeclStatement {token, initializer}))
@@ -322,7 +322,7 @@ impl Parser {
                 tokens.next(); // consume ";"
             },
             _ => {
-              return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ';' after statement"})  
+              return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "expected ';' after statement"})  
             }
         };
         Ok(Statement::PrintStatement(PrintStatement {token, value}))
@@ -345,7 +345,7 @@ impl Parser {
                     break;
                 },
                 TokenType::EOF => {
-                    return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "reached EOF while parsing, expected '}'"})
+                    return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "reached EOF while parsing, expected '}'"})
                 }
                 _ => {
                     statements.push(self.declaration(tokens)?);
@@ -364,7 +364,7 @@ impl Parser {
                 tokens.next(); // consume "("
             },
             _ => {
-                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected '(' after if"})
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "expected '(' after if"})
             }
         };
 
@@ -375,7 +375,7 @@ impl Parser {
                 tokens.next(); // consume ")"
             },
             _ => {
-                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ')' after if condition"})
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "expected ')' after if condition"})
             }
         };
 
@@ -403,7 +403,7 @@ impl Parser {
                 tokens.next(); // consume "("
             },
             _ => {
-                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected '(' after while"})
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "expected '(' after while"})
             }
         };
 
@@ -414,7 +414,7 @@ impl Parser {
                 tokens.next(); // consume ")"
             },
             _ => {
-                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ')' after while condition"})
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "expected ')' after while condition"})
             }
         };
 
@@ -431,7 +431,7 @@ impl Parser {
                 tokens.next(); // consume "("
             },
             _ => {
-                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected '(' after for"})
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "expected '(' after for"})
             }
         };
         
@@ -468,7 +468,7 @@ impl Parser {
                 tokens.next(); // consume ";"
             },
             _ => {
-                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ';' after for condition"})
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "expected ';' after for condition"})
             }
         };
 
@@ -488,7 +488,7 @@ impl Parser {
                 tokens.next(); // consume ")"
             },
             _ => {
-                return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ')' after for clause"})
+                return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "expected ')' after for clause"})
             }
         };
 
@@ -557,7 +557,7 @@ impl Parser {
                         tokens.next(); // consume ";"
                     },
                     _ => {
-                        return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ';' after return statement"})  
+                        return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "expected ';' after return statement"})  
                     }
                 }
             }
@@ -573,7 +573,7 @@ impl Parser {
                 tokens.next(); // consume ";"
             },
             _ => {
-              return Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "expected ';' after statement"})  
+              return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "expected ';' after statement"})  
             }
         };
         Ok(Statement::ExpressionStatement(ExpressionStatement {expression: expr}))
@@ -603,7 +603,7 @@ impl Parser {
                     }
                     _ => {}
                 };
-                Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "invalid assignment target"})
+                Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "invalid assignment target"})
             },
             _ => {
                 Ok(expr)
@@ -828,7 +828,7 @@ impl Parser {
                 // no need to return the Error
                 // that would mean the parser is in a bad state and needs to synchronize
                 // but we don't need to do that for this type of error
-                self.errors.push(LoxError {kind: LoxErrorKind::SyntaxError, message: "can't have > 255 arguments to a function call"})
+                self.errors.push(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "can't have > 255 arguments to a function call"})
             }
             args.push(self.expression(tokens)?);
             match &tokens.peek().unwrap().token_type {
@@ -868,7 +868,7 @@ impl Parser {
                 Ok(Expr::Grouping(Grouping {expr: Box::new(expr)}))
             }
             _ => {
-                Err(LoxError {kind: LoxErrorKind::SyntaxError, message: "invalid syntax"})
+                Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "invalid syntax"})
             }
         }
     }
