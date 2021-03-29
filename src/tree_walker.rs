@@ -258,7 +258,13 @@ impl TreeWalker {
     }
 
     fn visit_class_decl_statement<'b>(&mut self, stmt: &'b ClassDeclStatement) -> Result<(), LoxError> {
-        let class = LoxClass { name: stmt.name.lexeme.to_owned() };
+        let mut methods: HashMap<String, Function> = HashMap::new();
+        for method in &stmt.methods {
+            let callable = Function::new(method.clone(), Rc::clone(&self.environment));
+            methods.insert(method.name.lexeme.clone(), callable);
+        }
+
+        let class = LoxClass::new(stmt.name.lexeme.to_owned(), methods);
         self.define(&stmt.name.lexeme, Value::Callable(Box::new(class)));
 
         Ok(())

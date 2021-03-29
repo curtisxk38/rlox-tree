@@ -6,6 +6,7 @@ use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, 
 enum FunctionType {
     None,
     Function,
+    Method,
 }
 
 pub struct Resolver<'i>{
@@ -173,8 +174,8 @@ impl<'i> Resolver<'i> {
             FunctionType::None => {
                 self.errors.push(LoxError {kind: crate::error::LoxErrorKind::ResolvingError,
                     message: "Can't have a return statement in top level code"});
-            }
-            FunctionType::Function => {}
+            },
+            _ => {}
         }
 
         if let Some(expr) = &stmt.value {
@@ -190,7 +191,10 @@ impl<'i> Resolver<'i> {
     fn visit_class_decl_statement(&mut self, stmt: &ClassDeclStatement) {
         self.declare(&stmt.name.lexeme);
         self.define(&stmt.name.lexeme);
-        // TODO resolve methods themselves?
+        
+        for method in &stmt.methods {
+            self.resolve_function(method, FunctionType::Method);
+        }
     }
 
     fn visit_binary(&mut self, expr: &Binary) {

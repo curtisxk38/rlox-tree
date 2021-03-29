@@ -183,4 +183,5 @@ program_tests!(
     scoping: "tests/scoping.lox",
     class_creation: "tests/class_test.lox",
     class_fields: "tests/class_fields.lox",
+    basic_methods: "tests/basic_methods.lox",
 );

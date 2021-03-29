@@ -1,12 +1,19 @@
 use std::{cell::RefCell, collections::HashMap, fmt::Display, rc::Rc};
 
-use crate::{callable::LoxCallable, error::{LoxError, LoxErrorKind}, tree_walker::{self, Value}};
+use crate::{callable::{Function, LoxCallable}, error::{LoxError, LoxErrorKind}, tree_walker::{self, Value}};
 
 
 #[derive(Debug, Clone)]
 pub(crate) struct LoxClass {
     pub name: String,
+    methods: HashMap<String, Function>,
 
+}
+
+impl LoxClass {
+    pub fn new(name: String, methods: HashMap<String, Function>) -> LoxClass {
+        LoxClass { name, methods }
+    }
 }
 
 impl Display for LoxClass {
@@ -38,9 +45,12 @@ impl LoxInstance {
     }
 
     pub fn get(&self, name: &str) -> Result<Value, LoxError> {
-        match self.fields.get(name) {
-            Some(v) => { Ok(v.clone() )}
-            None => { Err(LoxError {kind: LoxErrorKind::AttributeError, message: "Instance has no attribute with that name"}) }
+        if let Some(value) = self.fields.get(name) {
+            Ok(value.clone())
+        } else if let Some(method) = self.class.methods.get(name) {
+            Ok(Value::Callable(Box::new(method.clone())))
+        } else {
+            Err(LoxError {kind: LoxErrorKind::AttributeError, message: "Instance has no attribute with that name"})
         }
     }
 
