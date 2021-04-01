@@ -1,0 +1,13 @@
+//<Foo instance>
+//<Foo instance>
+
+class Foo {
+  init() {
+    return;
+    print "unreachable";
+  }
+}
+
+var f = Foo();
+print(f);
+print(f.init()); //normally would return nil, but we special case make init() the instance

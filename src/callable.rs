@@ -75,7 +75,16 @@ impl LoxCallable for Function {
             Err(e) => {
                 match e.kind {
                     LoxErrorKind::Return(value) => {
-                        Ok(value)
+                        if self.is_initializer {
+                            // normally, the value will be Value::Nil
+                            // (since only returns w/o a value are allowed from initializers, ex: "return;" but not "return 5;")
+                            // but we want to special case make sure the initializer always returns a reference to the Value::Instance
+                            // NOTE: this only matters if you call init() directly, not from the class itself.
+                            // ie Foo() doesn't use use this code, but Foo().init() does. yeah, an extremely special case.
+                            self.closure.borrow().get_at("this", 0)
+                        } else {
+                            Ok(value)
+                        }
                     },
                     _ => {
                         Err(e)

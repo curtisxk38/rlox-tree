@@ -187,4 +187,5 @@ program_tests!(
     basic_init: "tests/basic_init.lox",
     weird_init: "tests/weird_init.lox",
     early_return: "tests/early_return.lox",
+    init_early_return: "tests/init_early_return.lox",
 );
