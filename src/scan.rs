@@ -215,7 +215,7 @@ impl<'c> Scanner {
     fn scan_alphabetic(&mut self, chars: &mut Peekable<Chars<'_>>, source: &'c String) -> Result<(), LoxError> {
         loop {
             if let Some(possible_alphabetic) = chars.peek() {
-                if possible_alphabetic.is_alphabetic() {
+                if possible_alphabetic.is_alphanumeric() {
                     self.advance(chars);
                 } else {
                     break;
