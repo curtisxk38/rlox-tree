@@ -185,4 +185,5 @@ program_tests!(
     class_fields: "tests/class_fields.lox",
     basic_methods: "tests/basic_methods.lox",
     basic_init: "tests/basic_init.lox",
+    weird_init: "tests/weird_init.lox",
 );

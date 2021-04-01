@@ -28,19 +28,20 @@ impl Clone for Box<dyn LoxCallable> {
 #[derive(Debug, Clone)]
 pub(crate) struct Function {
     declaration: FunDeclStatement,
-    closure: Rc<RefCell<Environment>>
+    closure: Rc<RefCell<Environment>>,
+    is_initializer: bool,
 }
 
 impl Function {
-    pub fn new(declaration: FunDeclStatement, closure: Rc<RefCell<Environment>>) -> Function {
-        Function { declaration, closure }
+    pub fn new(declaration: FunDeclStatement, closure: Rc<RefCell<Environment>>, is_initializer: bool) -> Function {
+        Function { declaration, closure, is_initializer }
     }
 
     pub fn bind(&self, instance: &Rc<RefCell<LoxInstance>>) -> Function {
         let mut environment = Environment::new();
         environment.parent = Some(Rc::clone(&self.closure));
         environment.define("this", Value::InstanceValue(Rc::clone(instance)));
-        return Function::new(self.declaration.clone(), Rc::new(RefCell::new(environment)));
+        return Function::new(self.declaration.clone(), Rc::new(RefCell::new(environment)), self.is_initializer);
     }
 }
 
@@ -65,7 +66,11 @@ impl LoxCallable for Function {
         let result = interpreter.execute_block(&self.declaration.body, Rc::new(RefCell::new(env)));
         match result {
             Ok(_) => {
-                Ok(Value::NilValue)
+                if self.is_initializer {
+                    self.closure.borrow().get_at("this", 0)
+                } else {
+                    Ok(Value::NilValue)
+                }
             },
             Err(e) => {
                 match e.kind {

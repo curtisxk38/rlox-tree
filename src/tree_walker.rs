@@ -57,7 +57,7 @@ impl Environment {
         }
     }
 
-    fn get_at<'b>(&self, name: &'b str, depth: usize) -> Result<Value, LoxError> {
+    pub fn get_at<'b>(&self, name: &'b str, depth: usize) -> Result<Value, LoxError> {
         if depth == 0 {
             return self.get(name);
         }
@@ -240,7 +240,7 @@ impl TreeWalker {
     }
 
     fn visit_fun_decl_statement<'b>(&mut self, stmt: &'b FunDeclStatement) -> Result<(), LoxError> {
-        let fun = Function::new(stmt.to_owned(), Rc::clone(&self.environment));
+        let fun = Function::new(stmt.to_owned(), Rc::clone(&self.environment), false);
         self.define(&stmt.name.lexeme, Value::Callable(Box::new(fun)));
         Ok(())
     }
@@ -260,7 +260,8 @@ impl TreeWalker {
     fn visit_class_decl_statement<'b>(&mut self, stmt: &'b ClassDeclStatement) -> Result<(), LoxError> {
         let mut methods: HashMap<String, Function> = HashMap::new();
         for method in &stmt.methods {
-            let callable = Function::new(method.clone(), Rc::clone(&self.environment));
+            let is_initializer = method.name.lexeme == "init";
+            let callable = Function::new(method.clone(), Rc::clone(&self.environment), is_initializer);
             methods.insert(method.name.lexeme.clone(), callable);
         }
 
