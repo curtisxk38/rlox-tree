@@ -7,6 +7,7 @@ enum FunctionType {
     None,
     Function,
     Method,
+    Initializer,
 }
 
 #[derive(Clone)]
@@ -187,6 +188,13 @@ impl<'i> Resolver<'i> {
         }
 
         if let Some(expr) = &stmt.value {
+            match self.current_function {
+                FunctionType::Initializer => {
+                    self.errors.push(LoxError {kind: crate::error::LoxErrorKind::ResolvingError,
+                        message: "Can't return a value from an initializer"});
+                },
+                _ => {}
+            }
             self.resolve_expression(expr);
         }
     }
@@ -207,7 +215,11 @@ impl<'i> Resolver<'i> {
         self.scopes.last_mut().unwrap().insert(String::from("this"), true); // we just called begin_scope, so unwrap won't ever panic
 
         for method in &stmt.methods {
-            self.resolve_function(method, FunctionType::Method);
+            let fun_type = match method.name.lexeme.as_str() {
+                "init" => FunctionType::Initializer,
+                _ => FunctionType::Method
+            };
+            self.resolve_function(method, fun_type);
         }
 
         self.end_scope();
