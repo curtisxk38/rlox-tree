@@ -23,13 +23,20 @@ impl Display for LoxClass {
 }
 
 impl LoxCallable for LoxClass {
-    fn call(& self, _interpreter:  &mut tree_walker::TreeWalker, _arguments: Vec<tree_walker::Value>) -> Result<tree_walker::Value, LoxError> {
-        let instance = LoxInstance::new(self.clone());
-        Ok(Value::InstanceValue(Rc::new(RefCell::new(instance))))
+    fn call(& self, interpreter:  &mut tree_walker::TreeWalker, arguments: Vec<tree_walker::Value>) -> Result<tree_walker::Value, LoxError> {
+        let instance = Rc::new(RefCell::new(LoxInstance::new(self.clone())));
+        if let Some(init) = self.methods.get("init") {
+            init.bind(&instance).call(interpreter, arguments)?;
+        }
+        Ok(Value::InstanceValue(instance))
     }
 
     fn arity(&self) -> usize {
-        0
+        if let Some(init) = self.methods.get("init") {
+            init.arity()
+        } else {
+            0
+        }
     }
 }
 

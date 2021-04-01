@@ -184,4 +184,5 @@ program_tests!(
     class_creation: "tests/class_test.lox",
     class_fields: "tests/class_fields.lox",
     basic_methods: "tests/basic_methods.lox",
+    basic_init: "tests/basic_init.lox",
 );

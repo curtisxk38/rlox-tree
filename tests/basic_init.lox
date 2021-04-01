@@ -1,0 +1,17 @@
+//10
+//8
+
+class Foo {
+    init(x, y) {
+        this.x = this.bar(x);
+        this.y = y + 2;
+    }
+
+    bar(z) {
+        return z * 2;
+    }
+}
+
+var f = Foo(5,6);
+print f.x;
+print f.y;
