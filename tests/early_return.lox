@@ -1,0 +1,11 @@
+//hi
+//nil
+
+fun foo() {
+    print "hi";
+    return;
+    print "yo";
+}
+
+var x = foo();
+print x;

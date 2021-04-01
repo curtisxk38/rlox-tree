@@ -252,7 +252,7 @@ impl TreeWalker {
                 Err(LoxError {kind: LoxErrorKind::Return(value), message: ""})
             },
             _ => {
-                Ok(())
+                Err(LoxError {kind: LoxErrorKind::Return(Value::NilValue), message: ""})
             }
         }
     }

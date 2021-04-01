@@ -186,4 +186,5 @@ program_tests!(
     basic_methods: "tests/basic_methods.lox",
     basic_init: "tests/basic_init.lox",
     weird_init: "tests/weird_init.lox",
+    early_return: "tests/early_return.lox",
 );
