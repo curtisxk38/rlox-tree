@@ -177,4 +177,5 @@ pub(crate) struct ReturnStatement {
 pub(crate) struct ClassDeclStatement {
     pub name: Token,
     pub methods: Vec<FunDeclStatement>,
+    pub superclass: Option<Variable>,
 }

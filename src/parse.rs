@@ -120,15 +120,32 @@ impl Parser {
         }
     }
 
-    // classDecl -> "class" IDENTIFIER "{" function* "}" ;
+    // classDecl -> "class" IDENTIFIER ( "<" IDENTIFIER )? "{" function* "}" ;
     // Unlike function declarations, methods don’t have a leading fun keyword
     fn class_declaration(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Statement, LoxError> {
         tokens.next(); // consume 'class'
         let name;
+        let superclass;
         match &tokens.peek().unwrap().token_type {
             TokenType::Identifier => name = tokens.next().unwrap().to_owned(),
             _ => {
                 return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "Expected class name"})
+            }
+        };
+        match &tokens.peek().unwrap().token_type {
+            TokenType::Less => {
+                tokens.next(); // consume '<'
+                match &tokens.peek().unwrap().token_type {
+                    TokenType::Identifier => {
+                        superclass = Some(Variable{ token: tokens.next().unwrap().to_owned() });
+                    },
+                    _ => {
+                        return Err(LoxError {kind: LoxErrorKind::SyntaxError(tokens.peek().unwrap().line), message: "Expected super class name"})
+                    }
+                }
+            },
+            _ => {
+                superclass = None;
             }
         };
         match &tokens.peek().unwrap().token_type {
@@ -151,7 +168,7 @@ impl Parser {
             };
             methods.push(self.function(tokens, FunctionKind::Method)?);
         };
-        Ok(Statement::ClassDeclStatement(ClassDeclStatement {name, methods}))
+        Ok(Statement::ClassDeclStatement(ClassDeclStatement {name, methods, superclass}))
     }
 
     // funDecl -> "fun" function ;
