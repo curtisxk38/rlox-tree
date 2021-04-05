@@ -76,5 +76,26 @@ var a = "global";
 }
 ```
 
+Classes:
+```
+class Foo {
+    init(x, y) {
+        this.x = this.bar(x);
+        this.y = y + 2;
+    }
+
+    bar(z) {
+        return z * 2;
+    }
+}
+
+var f = Foo(5,6);
+print f.x; // prints 10
+print f.y; // prints 8
+```
+
 ### To-do
-Classes and inheritance
+Inheritance
+
+## Limitations
+Instances are reference counted. So its easy for 2 instances to reference each other and form a cycle and they will not get cleaned up until the program finishes execution.
