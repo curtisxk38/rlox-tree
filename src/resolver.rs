@@ -211,6 +211,14 @@ impl<'i> Resolver<'i> {
         self.declare(&stmt.name.lexeme);
         self.define(&stmt.name.lexeme);
         
+        if let Some(superclass) = &stmt.superclass {
+            if superclass.token.lexeme == stmt.name.lexeme {
+                self.errors.push(LoxError {kind: crate::error::LoxErrorKind::ResolvingError,
+                    message: "A class can't inherit from itself"});
+            }
+            self.visit_variable(superclass);
+        }
+
         self.begin_scope();
         self.scopes.last_mut().unwrap().insert(String::from("this"), true); // we just called begin_scope, so unwrap won't ever panic
 
