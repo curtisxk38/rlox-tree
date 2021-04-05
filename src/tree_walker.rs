@@ -115,6 +115,7 @@ pub(crate) enum Value {
     NilValue,
     Callable(Box<dyn LoxCallable>),
     InstanceValue(Rc<RefCell<LoxInstance>>),
+    ClassValue(LoxClass)
 }
 
 impl Display for Value {
@@ -126,6 +127,7 @@ impl Display for Value {
             Value::NilValue => write!(f, "nil"),
             Value::Callable(c) => write!(f, "{}", c),
             Value::InstanceValue(i) => write!(f, "{}", i.borrow()),
+            Value::ClassValue(c) => write!(f, "{}", c),
         }
     }
 }
@@ -266,7 +268,7 @@ impl TreeWalker {
         }
 
         let class = LoxClass::new(stmt.name.lexeme.to_owned(), methods);
-        self.define(&stmt.name.lexeme, Value::Callable(Box::new(class)));
+        self.define(&stmt.name.lexeme, Value::ClassValue(class));
 
         Ok(())
     }
@@ -463,6 +465,13 @@ impl TreeWalker {
                     callee.call(self, args)
                 }
             },
+            Value::ClassValue(class) => {
+                if args.len() != class.arity() {
+                    Err(LoxError {kind: LoxErrorKind::TypeError, message: "Got wrong number of arguments"})
+                } else {
+                    class.call(self, args)
+                }
+            }
             _ => {
                 Err(LoxError {kind: LoxErrorKind::TypeError, message: "expression is not callable"})
             }
@@ -547,6 +556,7 @@ impl TreeWalker {
             Value::StringValue(_) => true,
             Value::Callable(_) => true,
             Value::InstanceValue(_) => true,
+            Value::ClassValue(_) => true,
         }
     }
 }
