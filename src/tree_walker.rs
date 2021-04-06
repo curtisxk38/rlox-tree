@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, fmt::{Display}, rc::Rc, usize};
 
-use crate::{ast::{Assignment, Binary, BinaryOperator, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Set, Statement, This, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, callable::LoxCallable, class::{LoxClass, LoxInstance}, error::{LoxError, LoxErrorKind}, native::ClockCallable, tokens::{LiteralValue, Token}};
+use crate::{ast::{Assignment, Binary, BinaryOperator, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Set, Statement, Super, This, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, callable::LoxCallable, class::{LoxClass, LoxInstance}, error::{LoxError, LoxErrorKind}, native::ClockCallable, tokens::{LiteralValue, Token}};
 
 use crate::callable::Function;
 
@@ -263,14 +263,22 @@ impl TreeWalker {
         let superclass;
         if let Some(superclass_var) = &stmt.superclass {
             match self.visit_variable(superclass_var)? {
-                Value::ClassValue(c) => { superclass = Some(c)},
+                Value::ClassValue(c) => { 
+                    superclass = Some(c.clone());
+                    let mut env = Environment::new();
+                    env.parent = Some(Rc::clone(&self.environment));
+                    self.environment = Rc::new(RefCell::new(env));
+                    self.environment.borrow_mut().define("super", Value::ClassValue(c))
+                },
                 _ => {
                     return Err(LoxError {kind: LoxErrorKind::TypeError, message: "Superclass must be a class"})
                 }
-            }
+            };
         } else {
             superclass = None;
         }
+
+
 
         let mut methods: HashMap<String, Function> = HashMap::new();
         for method in &stmt.methods {
@@ -280,6 +288,11 @@ impl TreeWalker {
         }
 
         let class = LoxClass::new(stmt.name.lexeme.to_owned(), methods, superclass);
+        if stmt.superclass.is_some() {
+            // unwrap is valid since we know we made a environment to store the "super" reference
+            let previous = self.environment.borrow().parent.as_ref().unwrap().to_owned();
+            self.environment = previous;
+        }
         self.define(&stmt.name.lexeme, Value::ClassValue(Rc::new(class)));
 
         Ok(())
@@ -319,6 +332,9 @@ impl TreeWalker {
             }
             Expr::This(t) => {
                 self.visit_this(t)
+            }
+            Expr::Super(s) => {
+                self.visit_super(s)
             }
         }
     }
@@ -519,6 +535,38 @@ impl TreeWalker {
 
     fn visit_this(&mut self, expr: &This) -> Result<Value, LoxError> {
         self.look_up_variable(&expr.keyword)
+    }
+
+    fn visit_super(&mut self, expr: &Super) -> Result<Value, LoxError> {
+        // we can unwrap since we know the resolver set up "super" correctly
+        let distance = self.locals.get(&expr.keyword.id).unwrap();
+        let superclass = self.environment.borrow().get_at("super", *distance)?;
+        let superclass = match superclass {
+            Value::ClassValue(c) => c,
+            _ => {
+                // should never occur
+                return Err(LoxError {kind: LoxErrorKind::TypeError, message: "expect super to be a class"})
+            }
+        };
+        // we know "this" is one scope closer than "super" due to the way we wrote
+        // visit_class_decl_statement
+        let instance = self.environment.borrow().get_at("this", *distance - 1)?;
+        let instance = match instance {
+            Value::InstanceValue(i) => i,
+            _ => {
+                // should never occur
+                return Err(LoxError {kind: LoxErrorKind::RuntimeError, message: "error calling super method"});
+            },
+        };
+        let method = superclass.find_method(&expr.method.lexeme);
+        match method {
+            Some(method) => {
+                Ok(Value::Callable(Box::new(method.bind(&instance))))
+            }
+            None => {
+                Err(LoxError {kind: LoxErrorKind::AttributeError, message: "super class has method with that name"})
+            }
+        }
     }
 
     pub fn execute_block(&mut self, statements: &Vec<Statement>, env: Rc<RefCell<Environment>>) -> Result<(), LoxError> {

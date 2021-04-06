@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Set, Statement, This, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
+use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, Grouping, IfStatement, Literal, Logical, LogicalOperator, PrintStatement, ReturnStatement, Set, Statement, Super, This, Unary, UnaryOperator, VarDeclStatement, Variable, WhileStatement}, error::{LoxError, LoxErrorKind}, tokens::{LiteralValue, Token, TokenType}};
 use crate::ast::{BinaryOperator};
 
 
@@ -860,7 +860,7 @@ impl Parser {
         Ok(args)
     }
 
-    // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" | "this" ;
+    // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" | "this" | "super" "." IDENTIFIER ;
     fn primary(&mut self, tokens: &mut Peekable<Iter<Token>>) -> Result<Expr, LoxError> {
         match &tokens.peek().unwrap().token_type {
             TokenType::False | TokenType::True | TokenType::Number | TokenType::String | TokenType::Nil => {
@@ -871,6 +871,26 @@ impl Parser {
             TokenType::This => {
                 let keyword = tokens.next().unwrap().to_owned();
                 Ok(Expr::This(This { keyword }))
+            },
+            TokenType::Super => {
+                let keyword = tokens.next().unwrap().to_owned();
+                match &tokens.peek().unwrap().token_type {
+                    TokenType::Dot => {
+                        tokens.next(); // consume '.'
+                        match &tokens.peek().unwrap().token_type {
+                            TokenType::Identifier => {
+                                let method = tokens.next().unwrap().to_owned();
+                                Ok(Expr::Super(Super { keyword, method }))
+                            },
+                            _ => {
+                                Err(LoxError {kind: LoxErrorKind::ScannerError, message: "expected superclass method name after '.'"})
+                            }
+                        }
+                    }, 
+                    _ => {
+                        Err(LoxError {kind: LoxErrorKind::ScannerError, message: "expected '.' after 'super' keyword"})
+                    }
+                }
             },
             TokenType::Identifier => {
                 Ok(Expr::Variable(Variable { token: tokens.next().unwrap().to_owned() }))

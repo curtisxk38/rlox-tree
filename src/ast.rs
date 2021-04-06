@@ -40,6 +40,7 @@ pub(crate) enum Expr {
     Get(Get),
     Set(Set),
     This(This),
+    Super(Super),
 }
 
 #[derive(Debug, Clone)]
@@ -110,6 +111,12 @@ pub(crate) struct Set {
 #[derive(Debug, Clone)]
 pub(crate) struct This {
     pub keyword: Token,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Super {
+    pub keyword: Token,
+    pub method: Token,
 }
 
 #[derive(Debug, Clone)]

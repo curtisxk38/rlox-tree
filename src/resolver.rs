@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, Grouping, IfStatement, Logical, PrintStatement, ReturnStatement, Set, Statement, This, Unary, VarDeclStatement, Variable, WhileStatement}, error::LoxError, tokens::Token, tree_walker::TreeWalker};
+use crate::{ast::{Assignment, Binary, BlockStatement, Call, ClassDeclStatement, Expr, ExpressionStatement, FunDeclStatement, Get, Grouping, IfStatement, Logical, PrintStatement, ReturnStatement, Set, Statement, Super, This, Unary, VarDeclStatement, Variable, WhileStatement}, error::LoxError, tokens::Token, tree_walker::TreeWalker};
 
 #[derive(Clone)]
 enum FunctionType {
@@ -74,6 +74,7 @@ impl<'i> Resolver<'i> {
             Expr::Get(g) => { self.visit_get(g) }
             Expr::Set(s) => { self.visit_set(s) }
             Expr::This(t) => { self.visit_this(t) }
+            Expr::Super(s) => { self.visit_super(s) }
         }
     }
 
@@ -217,7 +218,13 @@ impl<'i> Resolver<'i> {
                     message: "A class can't inherit from itself"});
             }
             self.visit_variable(superclass);
+
+            // special scope that contains super keyword reference to superclass
+            // this scope contains the scope that has all the class methods
+            self.begin_scope();
+            self.scopes.last_mut().unwrap().insert(String::from("super"), true);
         }
+
 
         self.begin_scope();
         self.scopes.last_mut().unwrap().insert(String::from("this"), true); // we just called begin_scope, so unwrap won't ever panic
@@ -231,6 +238,11 @@ impl<'i> Resolver<'i> {
         }
 
         self.end_scope();
+
+        if let Some(_) = &stmt.superclass {
+            self.end_scope();
+        }
+
         self.current_class = enclosing_class_type;
     }
 
@@ -265,6 +277,10 @@ impl<'i> Resolver<'i> {
                     message: "Can't use this keyword outside of a class"});
             }
         }
+    }
+
+    fn visit_super(&mut self, expr: &Super) {
+        self.resolve_local(&expr.keyword);
     }
 
     fn visit_grouping(&mut self, expr: &Grouping) {

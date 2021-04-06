@@ -188,4 +188,7 @@ program_tests!(
     weird_init: "tests/weird_init.lox",
     early_return: "tests/early_return.lox",
     init_early_return: "tests/init_early_return.lox",
+    basic_inheritance: "tests/basic_inheritance.lox",
+    superclass_method: "tests/superclass_method.lox",
+    super_resolving: "tests/super_resolving.lox",
 );
