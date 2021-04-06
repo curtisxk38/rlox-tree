@@ -14,6 +14,16 @@ impl LoxClass {
     pub fn new(name: String, methods: HashMap<String, Function>, superclass: Option<Rc<LoxClass>>) -> LoxClass {
         LoxClass { name, methods, superclass }
     }
+
+    pub fn find_method(&self, name: &str) -> Option<&Function> {
+        match self.methods.get(name) {
+            Some(m) => Some(m),
+            None => match &self.superclass {
+                Some(superclass) => superclass.find_method(name),
+                None => None
+            }
+        }
+    }
 }
 
 impl Display for LoxClass {
@@ -54,7 +64,7 @@ impl LoxInstance {
     pub fn get(&self, name: &str, instance: &Rc<RefCell<LoxInstance>>) -> Result<Value, LoxError> {
         if let Some(value) = self.fields.get(name) {
             Ok(value.clone())
-        } else if let Some(method) = self.class.methods.get(name) {
+        } else if let Some(method) = self.class.find_method(name) {
             Ok(Value::Callable(Box::new(method.bind(instance))))
         } else {
             Err(LoxError {kind: LoxErrorKind::AttributeError, message: "Instance has no attribute with that name"})
