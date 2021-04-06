@@ -14,6 +14,7 @@ enum FunctionType {
 enum ClassType {
     None,
     Class,
+    Subclass,
 }
 
 pub struct Resolver<'i>{
@@ -217,6 +218,7 @@ impl<'i> Resolver<'i> {
                 self.errors.push(LoxError {kind: crate::error::LoxErrorKind::ResolvingError,
                     message: "A class can't inherit from itself"});
             }
+            self.current_class = ClassType::Subclass;
             self.visit_variable(superclass);
 
             // special scope that contains super keyword reference to superclass
@@ -269,7 +271,7 @@ impl<'i> Resolver<'i> {
 
     fn visit_this(&mut self, expr: &This) {
         match &self.current_class {
-            ClassType::Class => {
+            ClassType::Class | ClassType::Subclass => {
                 self.resolve_local(&expr.keyword)
             },
             ClassType::None => {
@@ -280,6 +282,17 @@ impl<'i> Resolver<'i> {
     }
 
     fn visit_super(&mut self, expr: &Super) {
+        match self.current_class {
+            ClassType::None => {
+                self.errors.push(LoxError {kind: crate::error::LoxErrorKind::ResolvingError,
+                    message: "Can't use super keyword outside of a class"});
+            }
+            ClassType::Class => {
+                self.errors.push(LoxError {kind: crate::error::LoxErrorKind::ResolvingError,
+                    message: "Can't use super keyword inside a class with no superclass"});
+            }
+            ClassType::Subclass => {}
+        };
         self.resolve_local(&expr.keyword);
     }
 
