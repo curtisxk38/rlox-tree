@@ -115,7 +115,7 @@ pub(crate) enum Value {
     NilValue,
     Callable(Box<dyn LoxCallable>),
     InstanceValue(Rc<RefCell<LoxInstance>>),
-    ClassValue(LoxClass)
+    ClassValue(Rc<LoxClass>)
 }
 
 impl Display for Value {
@@ -260,6 +260,18 @@ impl TreeWalker {
     }
 
     fn visit_class_decl_statement<'b>(&mut self, stmt: &'b ClassDeclStatement) -> Result<(), LoxError> {
+        let superclass;
+        if let Some(superclass_var) = &stmt.superclass {
+            match self.visit_variable(superclass_var)? {
+                Value::ClassValue(c) => { superclass = Some(c)},
+                _ => {
+                    return Err(LoxError {kind: LoxErrorKind::TypeError, message: "Superclass must be a class"})
+                }
+            }
+        } else {
+            superclass = None;
+        }
+
         let mut methods: HashMap<String, Function> = HashMap::new();
         for method in &stmt.methods {
             let is_initializer = method.name.lexeme == "init";
@@ -267,8 +279,8 @@ impl TreeWalker {
             methods.insert(method.name.lexeme.clone(), callable);
         }
 
-        let class = LoxClass::new(stmt.name.lexeme.to_owned(), methods);
-        self.define(&stmt.name.lexeme, Value::ClassValue(class));
+        let class = LoxClass::new(stmt.name.lexeme.to_owned(), methods, superclass);
+        self.define(&stmt.name.lexeme, Value::ClassValue(Rc::new(class)));
 
         Ok(())
     }

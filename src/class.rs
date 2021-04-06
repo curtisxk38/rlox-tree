@@ -7,12 +7,12 @@ use crate::{callable::{Function, LoxCallable}, error::{LoxError, LoxErrorKind}, 
 pub(crate) struct LoxClass {
     pub name: String,
     methods: HashMap<String, Function>,
-
+    superclass: Option<Rc<LoxClass>>,
 }
 
 impl LoxClass {
-    pub fn new(name: String, methods: HashMap<String, Function>) -> LoxClass {
-        LoxClass { name, methods }
+    pub fn new(name: String, methods: HashMap<String, Function>, superclass: Option<Rc<LoxClass>>) -> LoxClass {
+        LoxClass { name, methods, superclass }
     }
 }
 
